@@ -140,6 +140,11 @@ contains
 #ifndef ISO
       use global,      only: smallei
 #endif /* !ISO */
+#ifdef RIEMANN
+      use constants,   only: ndims
+      use hlld,        only: riemann_hlld
+#endif /* RIEMANN */
+
       implicit none
 
       class(component_fluid), pointer :: fl
@@ -148,8 +153,32 @@ contains
       type(cg_list_element),  pointer :: cgl
       type(grid_container),   pointer :: cg
       integer                         :: p
+#ifdef RIEMANN
+      integer, parameter   :: nx = 1, nfl = 5   ! one point, 5 quantities (assuming: density, velocities and energy)
+      real, dimension(nfl, nx), target :: ql, qr, flx
+      real, dimension(ndims, nx), target :: bl, br, bflx
+      real, dimension(:,:), pointer :: p_flx, p_bflx, p_ql, p_qr, p_bl, p_br
+#endif /* RIEMANN */
 
       call read_problem_par
+
+#ifdef RIEMANN
+      do p = 1, flind%fluids
+         ql = reshape([ dl, vxl, vyl, vzl, el ], [nfl, nx])
+         qr = reshape([ dr, vxr, vyr, vzr, er ], [nfl, nx])
+         bl = reshape([ bxl, byl, bzl ], [ndims, nx])
+         br = reshape([ bxr, byr, bzr ], [ndims, nx])
+
+         p_flx => flx
+         p_bflx => bflx
+         p_ql => ql
+         p_qr => qr
+         p_bl => bl
+         p_br => br
+
+         call riemann_hlld(nx, p_flx, p_ql, p_qr, p_bflx, p_bl, p_br, flind%all_fluids(p)%fl%gam)
+      end do
+#endif /* RIEMANN */
 
       !   Secondary parameters
       do p = 1, flind%fluids
