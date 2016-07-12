@@ -148,9 +148,24 @@ contains
     real, dimension(flind%all)                   :: u_starl, u_starr, u_2star, v_starl, v_starr, v_2star
     real, dimension(xdim:zdim,n)                 :: b_cclf, b_ccrf
     real, dimension(xdim:zdim)                   :: b_starl, b_starr, b_2star
+    logical :: verbose
 
     ! SOLVER
-    
+
+    verbose = (n == 1)
+    if (verbose) then
+       write(*,*)"Verbose mode:"
+       write(*,'(3a20)')"quantity", "Left state", "right state"
+       write(*,'(a20,2g20.8)')"density", ul(idn, n), ur(idn, n)
+       write(*,'(a20,2g20.8)')"velocity x", ul(imx, n), ur(imx, n)
+       write(*,'(a20,2g20.8)')"velocity y", ul(imy, n), ur(imy, n)
+       write(*,'(a20,2g20.8)')"velocity z", ul(imz, n), ur(imz, n)
+       write(*,'(a20,2g20.8)')"energy", ul(ien, n), ur(ien, n)
+       write(*,'(a20,2g20.8)')"B x", b_ccl(xdim, n), b_ccr(xdim, n)
+       write(*,'(a20,2g20.8)')"B y", b_ccl(ydim, n), b_ccr(ydim, n)
+       write(*,'(a20,2g20.8)')"B z", b_ccl(zdim, n), b_ccr(zdim, n)
+    end if
+
     b_cc(xdim,:) = 0.
     
     do i = 1,n
@@ -178,11 +193,14 @@ contains
             + sqrt((gampr_r+(b_ccr(xdim,i)**2+b_ccr(ydim,i)**2+b_ccr(zdim,i)**2))**2-(four*gampr_r*b_ccr(xdim,i)**2))
 
        c_fastr  =  sqrt(half*c_fastr/ur(idn,i))
+
+       if (verbose) write(*,'(a20,2g20.8)')"c_fast", c_fastl, c_fastr
         
        ! Eq. (67)
 
        sl  =  min(ul(imx,i) ,ur(imx,i)) - max(c_fastl,c_fastr)
        sr  =  max(ul(imx,i), ur(imx,i)) + max(c_fastl,c_fastr)
+       if (verbose) write(*,'(a20,2g20.8)')"fast shocks", sl, sr
 
        ! Magnetic pressure
 
@@ -210,6 +228,18 @@ contains
        b_ccrf(zdim,i) = b_ccr(zdim,i)*ul(imx,i) - b_ccr(xdim,i)*ur(imz,i)
 
        ! HLLD fluxes
+
+       if (verbose) then
+          write(*,*)"Fluxes"
+          write(*,'(a20,2g20.8)')"density", fl(idn, n), fr(idn, n)
+          write(*,'(a20,2g20.8)')"velocity x", fl(imx, n), fr(imx, n)
+          write(*,'(a20,2g20.8)')"velocity y", fl(imy, n), fr(imy, n)
+          write(*,'(a20,2g20.8)')"velocity z", fl(imz, n), fr(imz, n)
+          write(*,'(a20,2g20.8)')"energy", fl(ien, n), fr(ien, n)
+          write(*,'(a20,2g20.8)')"B x", b_cclf(xdim, n), b_ccrf(xdim, n)
+          write(*,'(a20,2g20.8)')"B y", b_cclf(ydim, n), b_ccrf(ydim, n)
+          write(*,'(a20,2g20.8)')"B z", b_cclf(zdim, n), b_ccrf(zdim, n)
+       end if
 
        if (sl .ge.  zero) then
           f(idn,i)  =  fl(idn,i)
