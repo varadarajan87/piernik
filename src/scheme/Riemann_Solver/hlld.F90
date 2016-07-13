@@ -241,7 +241,7 @@ contains
           write(*,'(a20,2g20.8)')"B z", b_cclf(zdim, n), b_ccrf(zdim, n)
        end if
 
-       if (sl .ge.  zero) then
+       if ((sl .ge.  zero) .and. .not. verbose) then
           f(idn,i)  =  fl(idn,i)
           f(imx,i)  =  fl(imx,i)
           f(imy,i)  =  fl(imy,i)
@@ -250,7 +250,7 @@ contains
           b_cc(ydim,i) = b_cclf(ydim,i)
           b_cc(zdim,i) = b_cclf(zdim,i)
 
-       else if (sr .le.  zero) then
+       else if ((sr .le.  zero) .and. .not. verbose) then
           f(idn,i)  =  fr(idn,i)
           f(imx,i)  =  fr(imx,i)
           f(imy,i)  =  fr(imy,i)
@@ -266,6 +266,7 @@ contains
           sm_nr = (sr - ur(imx,i))*ur(idn,i)*ur(imx,i) - (sl - ul(imx,i))*ul(idn,i)*ul(imx,i) - prr(ien,i) + prl(ien,i)
           sm_dr = (sr - ur(imx,i))*ur(idn,i) - (sl - ul(imx,i))*ul(idn,i)
           sm    = sm_nr/sm_dr
+          if (verbose) write(*,'(a20,g20.8)')"sm", sm
 
           ! Speed differences
 
@@ -383,6 +384,18 @@ contains
           u_starl(ien) = (slvxl*enl - prl(ien,i)*ul(imx,i) + prt_star*sm + b_ccl(xdim,i)*(vb_l - vb_starl))/slsm
           u_starr(ien) = (srvxr*enr - prr(ien,i)*ur(imx,i) + prt_star*sm + b_ccr(xdim,i)*(vb_r - vb_starr))/srsm
 
+       if (verbose) then
+          write(*,*)"u*"
+          write(*,'(a20,2g20.8)')"density", u_starl(idn), u_starr(idn)
+          write(*,'(a20,2g20.8)')"velocity x", u_starl(imx), u_starr(imx)
+          write(*,'(a20,2g20.8)')"velocity y", u_starl(imy), u_starr(imy)
+          write(*,'(a20,2g20.8)')"velocity z", u_starl(imz), u_starr(imz)
+          write(*,'(a20,2g20.8)')"energy", u_starl(ien), u_starr(ien)
+          write(*,'(a20,2g20.8)')"B x", b_starl(xdim), b_starr(xdim)
+          write(*,'(a20,2g20.8)')"B y", b_starl(ydim), b_starr(ydim)
+          write(*,'(a20,2g20.8)')"B z", b_starl(zdim), b_starr(zdim)
+       end if
+
           ! Cases for B_x .ne. and .eq. zero
           
           if (abs(b_ccl(xdim,i)) > zero) then
@@ -394,6 +407,8 @@ contains
 
              alfven_l  =  sm - abs(b_ccl(xdim,i))/dn_lsqt
              alfven_r  =  sm + abs(b_ccr(xdim,i))/dn_rsqt
+
+             if (verbose) write(*,'(a20,2g20.8)')"alfven", alfven_l, alfven_r
 
              ! Intermediate discontinuities
 
