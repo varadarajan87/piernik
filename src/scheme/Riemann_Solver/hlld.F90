@@ -117,6 +117,7 @@ contains
     use constants,  only: half, zero, xdim, ydim, zdim, idn, imx, imy, imz, ien
     use fluidindex, only: flind
     use func,       only: operator(.notequals.)
+    use mpisetup,   only: master
 
     ! arguments
 
@@ -152,7 +153,8 @@ contains
 
     ! SOLVER
 
-    verbose = (n == 1)
+    verbose = (n == 1) .and. master
+
     if (verbose) then
        write(*,*)"Verbose mode:"
        write(*,'(3a20)')"quantity", "Left state", "right state"
