@@ -294,7 +294,14 @@ contains
                  &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)), kind=4) - &
                  &       real(flind%ion%gam_1*emag(cg%b(xdim, RNG), cg%b(ydim, RNG), cg%b(zdim, RNG)), kind=4)
 #endif /* !ISO */
-         case ("ethn")
+          case ("pmag%")
+#ifndef ISO
+            tab(:,:,:) = real(flind%ion%gam_1*emag(cg%b(xdim, RNG), cg%b(ydim, RNG), cg%b(zdim, RNG)), kind=4) / &
+                 &      (real(flind%ion%gam_1, kind=4) * real( cg%u(flind%ion%ien, RNG) - &
+                 &       ekin(cg%u(flind%ion%imx, RNG), cg%u(flind%ion%imy, RNG), cg%u(flind%ion%imz, RNG), cg%u(flind%ion%idn, RNG)), kind=4) - &
+                 &       real(flind%ion%gam_1*emag(cg%b(xdim, RNG), cg%b(ydim, RNG), cg%b(zdim, RNG)), kind=4))
+#endif /* !ISO */
+        case ("ethn")
 #ifndef ISO
             tab(:,:,:) = real( (cg%u(flind%neu%ien, RNG) - &
                  &       ekin(cg%u(flind%neu%imx, RNG), cg%u(flind%neu%imy, RNG), cg%u(flind%neu%imz, RNG), cg%u(flind%neu%idn, RNG))) /         &
