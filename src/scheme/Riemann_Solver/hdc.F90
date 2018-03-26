@@ -179,20 +179,25 @@ contains
 !<
   subroutine glmdamping
 
-     use global,           only: cfl, glm_alpha
+     use global,           only: cfl, glm_alpha, dt
      use cg_list,          only: cg_list_element
      use cg_leaves,        only: leaves
      use constants,        only: psi_n
      use named_array_list, only: qna
+     use grid_cont,        only: grid_container
 
      implicit none
 
      type(cg_list_element), pointer :: cgl
+     type(grid_container),  pointer :: cg
 
+     integer(kind=4)                :: ddim
+     
      if (qna%exists(psi_n)) then
         cgl => leaves%first
         do while (associated(cgl))
-           cgl%cg%q(qna%ind(psi_n))%arr =  cgl%cg%q(qna%ind(psi_n))%arr * exp(-glm_alpha*cfl)
+           cg => cgl%cg
+           cgl%cg%q(qna%ind(psi_n))%arr =  cgl%cg%q(qna%ind(psi_n))%arr * exp(-glm_alpha*chspeed/(cg%dl(ddim)/dt))
            ! for AMR or POLAR it may be better to have explicit dependence on cg%dl(:) here
            cgl => cgl%nxt
         enddo
