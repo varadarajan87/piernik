@@ -177,7 +177,7 @@ contains
 !>
   !! Parabolic damping to psi
 !<
-  subroutine glmdamping
+  subroutine glmdamping(ddim)
 
      use global,           only: cfl, glm_alpha, dt
      use cg_list,          only: cg_list_element
@@ -188,10 +188,10 @@ contains
 
      implicit none
 
-     type(cg_list_element), pointer :: cgl
-     type(grid_container),  pointer :: cg
+     type(cg_list_element), pointer   :: cgl
+     type(grid_container),  pointer   :: cg
 
-     integer(kind=4)                :: ddim
+     integer(kind=4),      intent(in) :: ddim
      
      if (qna%exists(psi_n)) then
         cgl => leaves%first
@@ -308,6 +308,8 @@ contains
 
      implicit none
 
+     integer(kind=4)  :: ddim
+
 #ifdef MAGNETIC
      integer :: ig, psii
      type(cg_list_element), pointer :: cgl
@@ -316,7 +318,7 @@ contains
 #endif /* MAGNETIC */
 
      if (.not. use_hdc_3D) then
-        call glmdamping
+        call glmdamping(ddim)
         return
      endif
 
@@ -324,7 +326,7 @@ contains
      psii = qna%ind(psi_n)
 
      do ig = 1, glm_iter
-        call glmdamping
+        call glmdamping(ddim)
         call leaves%leaf_arr3d_boundaries(psii)
         call all_mag_boundaries
         cgl => leaves%first
