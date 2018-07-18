@@ -372,6 +372,8 @@ contains
 
     real, dimension(size(q,1))                 :: qm2, qm1
     real, dimension(size(q,1))                 :: qp1, qp2
+    real, dimension(size(q,1))                 :: avg1,  avg2, avg3
+    real, dimension(size(q,1))                 :: dq1, dq2, dq3
     real, dimension(size(q,1))                 :: delta_u_im1, delta_u_i, delta_u_ip1
     real, dimension(size(q,1))                 :: delta_u_ip1_2, delta_u_im1_2
     integer                                    :: n
@@ -389,24 +391,39 @@ contains
 
     ! PPM requires 5 zones, 0, \pm 1, \pm 2
     
-    do i = 3, n-2
+    !do i = 3, n-2
+    
+    do i = 2, n-1
 
        qm2 = q(:, i-1) - q(:, i-2) 
        qm1 = q(:, i)   - q(:, i-1) 
        qp1 = q(:, i+1) - q(:, i)
        qp2 = q(:, i+2) - q(:, i+1)
 
-       delta_u_im1 = half*( qm1 + qm2 )
-       delta_u_i   = half*( qm1 + qp1 )
-       delta_u_ip1 = half*( qp1 + qp2 ) 
-       
-       
+       avg1 = half*( qm1 + qm2)
+       dq1  = (sign(one, qm1) + sign(one, qm2))*min(abs(qm1),abs(qm2))
+       delta_u_im1 = (sign(one, avg1) + sign(one, dq1))*min(abs(avg1),abs(dq1))
+
+       avg2 = half*( qm1 + qp1)
+       dq2  = (sign(one, qm1) + sign(one, qp1))*min(abs(qm1),abs(qp1))
+       delta_u_i = (sign(one, avg2) + sign(one, dq2))*min(abs(avg2),abs(dq2))
+
+       avg3 = half*( qp1 + qp2 )
+       dq3 = (sign(one, qp1) + sign(one, qp2))*min(abs(qp1),abs(qp2))
+       delta_u_ip1 = (sign(one, avg3) + sign(one, dq3))*min(abs(avg3),abs(dq3))
+
+       !delta_u_im1 = half*( qm1 + qm2 )
+       !delta_u_i   = half*( qm1 + qp1 )
+       !delta_u_ip1 = half*( qp1 + qp2 )
+
+       ql(:, i)   = half*( q(:, i) + q(:, i+1) ) + onesth*(delta_u_i   - delta_u_ip1)
+       qr(:, i-1) = half*( q(:, i) + q(:, i-1) ) + onesth*(delta_u_im1 - delta_u_i)
+
        ! Eq. 9.60
        ! To ensure that U^n_j+1/2 does not fall outside the range of the two adjacent values U^n_j and U^n_j+1
        
        delta_u_ip1_2 = half*(q(:,i+1)-q(:,i)) 
-       delta_u_im1_2 = half*(q(:,i)-q(:,i-1)) 
-       
+       delta_u_im1_2 = half*(q(:,i)-q(:,i-1))
 
        where (delta_u_ip1_2(:)*delta_u_im1_2(:).gt.zero)
 
@@ -431,8 +448,11 @@ contains
     
     ! Q&D: fix for FPE
     ! ToDo: handle it properly
-    ql(:, :2) = q(:, :2)
-    qr(:, n-2:) = q(:, n-1:)
+    !ql(:, :2) = q(:, :2)
+    !qr(:, n-2:) = q(:, n-1:)
+    
+    ql(:, :1) = q(:, :1)
+    qr(:, n-1:) = q(:, n:)
     
   end subroutine parabolic
 
