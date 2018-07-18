@@ -389,7 +389,7 @@ contains
 
     ! PPM requires 5 zones, 0, \pm 1, \pm 2
     
-    do i = 2, n-1
+    do i = 3, n-2
 
        qm2 = q(:, i-1) - q(:, i-2) 
        qm1 = q(:, i)   - q(:, i-1) 
@@ -431,8 +431,8 @@ contains
     
     ! Q&D: fix for FPE
     ! ToDo: handle it properly
-    ql(:, 1) = q(:, 1)
-    qr(:, n-1) = q(:, n)
+    ql(:, :2) = q(:, :2)
+    qr(:, n-2:) = q(:, n-1:)
     
   end subroutine parabolic
 
