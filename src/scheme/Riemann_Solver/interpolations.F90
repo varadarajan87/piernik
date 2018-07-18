@@ -147,8 +147,10 @@ contains
        interp => linear
     case ('weno3', 'WENO3', 'wo3', '2')
        interp => weno3
+    case ('parabolic', 'PARABOLIC', 'ppm', '3')
+       interp => parabolic
     case default
-       write(msg, '(3a)') "[interpolations:set_interpolations] unknown interpolation '", interpol_str, "'"
+       write(msg, '(4a)') "[interpolations:set_interpolations] unknown interpolation '", interpol_str, "'"
        call die(msg)
        interp => null()
     end select
@@ -327,5 +329,111 @@ contains
     qr(:, n-1) = q(:, n)
 
   end subroutine weno3
+
+  !>
+  !! Piecewise parabolic method (PPM or parabolic for short) for interpolation
+  !! ---------------------------------------------------------------------------------------------------------------
+  !! Reference:
+  !! Relativistic hydrodynamics, L. Rezzolla, O. Zanotti
+  !! Section 9.3.2, Equations: 9.59, 9.60
+  !! Literature:
+  !! P. Colella, P.R. Woodward, Journal of Computational Physics, 54, 174 (1984)
+  !! ----------------------------------------------------------------------------------------------------------------
+  !! Eq 9.59 (Relativistic hydrodynamics)
+  !! U^n_j+1/2 = 1/2 (U^n_j + U^n_j+1) + 1/6 (\delta U^n_j - \delta U^n_j+1)
+  !! where, \delta U^n_j := 1/2 ( U^n_j+1 - U^n_j-1 ).
+  !! U^n_j+1/2 should not fall outside the range of the two adjacent values U^n_j and U^n_j+1.
+  !! Hence, \delta U^n_j is replaced with
+  !! Eq. 9.60 (Relativistic hydrodynamics)
+  !! if \delta U^n_j+1/2 \delta U^n_j-1/2 > 0 then
+  !! \delta U^n_j = min(|\delta U^n_j|,2|U^n_j - U^n_j-1|,2|U^n_j+1 - U^n_j|)sign(\delta U^n_j)
+  !! else
+  !! \delta U^n_j = 0,
+  !! where, \delta U^n_j \pm 1/2 := \pm half( U^n_j \pm 1 - U^n_j  ).
+  !! -----------------------------------------------------------------------------------------------------------------
+  !! The PPM also requires that the interpolation function is continuous at x_j+1/2 in smooth parts away from extrema,
+  !! and interpolating parabola is monotone in each cell.
+  !<
+
+  subroutine parabolic(q, ql, qr, f_limiter)
+
+
+    use constants,    only: GEO_XYZ, onesth, half, zero, two, one
+    use dataio_pub,   only: die, msg
+    use fluxlimiters, only: limiter
+    use domain,       only: dom
+    
+    implicit none
+
+    real, dimension(:,:),          intent(in)  :: q
+    real, dimension(:,:),          intent(out) :: ql
+    real, dimension(:,:),          intent(out) :: qr
+    procedure(limiter)  , pointer, intent(in)  :: f_limiter
+
+    real, dimension(size(q,1))                 :: qm2, qm1
+    real, dimension(size(q,1))                 :: qp1, qp2
+    real, dimension(size(q,1))                 :: delta_u_im1, delta_u_i, delta_u_ip1
+    real, dimension(size(q,1))                 :: delta_u_ip1_2, delta_u_im1_2
+    integer                                    :: n
+    integer, parameter                         :: in = 2  ! index for cells
+    integer                                    :: i
+
+    n = size(q, in)
+
+    if (dom%geometry_type /= GEO_XYZ) call die("[interpolations:linear] non-cartesian geometry not implemented yet.")
+    if (size(q, in) - size(ql, in) /= 1) then
+       write(msg, '(2(a,2i7),a)')"[interpolations:linear] face vector of wrong length: ", size(q, in), size(ql, in), " (expecting: ", size(q, in), size(q, in)-1, ")"
+       call die(msg)
+    endif
+    if (any(shape(ql) /= shape(qr))) call die("[interpolations:linear] face vectors of different lengths")
+
+    ! PPM requires 5 zones, 0, \pm 1, \pm 2
+    
+    do i = 2, n-1
+
+       qm2 = q(:, i-1) - q(:, i-2) 
+       qm1 = q(:, i)   - q(:, i-1) 
+       qp1 = q(:, i+1) - q(:, i)
+       qp2 = q(:, i+2) - q(:, i+1)
+
+       delta_u_im1 = half*( qm1 + qm2 )
+       delta_u_i   = half*( qm1 + qp1 )
+       delta_u_ip1 = half*( qp1 + qp2 ) 
+       
+       
+       ! Eq. 9.60
+       ! To ensure that U^n_j+1/2 does not fall outside the range of the two adjacent values U^n_j and U^n_j+1
+       
+       delta_u_ip1_2 = half*(q(:,i+1)-q(:,i)) 
+       delta_u_im1_2 = half*(q(:,i)-q(:,i-1)) 
+       
+
+       if(delta_u_ip1_2(1)*delta_u_im1_2(1).gt.zero) then
+
+          delta_u_i = min( abs(delta_u_i), two*abs(delta_u_ip1_2) , two*abs(delta_u_im1_2) )*sign(one,delta_u_i)
+          
+       else
+
+          delta_u_i = zero
+          
+       end if
+
+       ! Eq. 9.59
+       
+       ql(:, i)   = half*( q(:, i) + q(:, i+1) ) + onesth*(delta_u_i   - delta_u_ip1)
+       qr(:, i-1) = half*( q(:, i) + q(:, i-1) ) + onesth*(delta_u_im1 - delta_u_i)
+
+
+       if (.false.) qr = f_limiter(q)  ! suppress compiler worning on argument needed for other interpolation scheme
+       
+    end do
+
+    
+    ! Q&D: fix for FPE
+    ! ToDo: handle it properly
+    ql(:, 1) = q(:, 1)
+    qr(:, n-1) = q(:, n)
+    
+  end subroutine parabolic
 
 end module interpolations
