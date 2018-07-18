@@ -408,15 +408,15 @@ contains
        delta_u_im1_2 = half*(q(:,i)-q(:,i-1)) 
        
 
-       if(delta_u_ip1_2(1)*delta_u_im1_2(1).gt.zero) then
+       where (delta_u_ip1_2(:)*delta_u_im1_2(:).gt.zero)
 
           delta_u_i = min( abs(delta_u_i), two*abs(delta_u_ip1_2) , two*abs(delta_u_im1_2) )*sign(one,delta_u_i)
           
-       else
+       elsewhere
 
           delta_u_i = zero
           
-       end if
+       end where
 
        ! Eq. 9.59
        
