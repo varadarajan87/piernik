@@ -205,13 +205,13 @@ contains
 !<
 
   subroutine weno3(q, ql, qr, f_limiter)
-    
+
     use constants,    only: GEO_XYZ, onet, twot, one, two
     use dataio_pub,   only: die, msg
     use domain,       only: dom
     use fluxlimiters, only: limiter
     use global,       only: w_epsilon
-    
+
     implicit none
 
     real, dimension(:,:),        intent(in)  :: q
@@ -220,7 +220,7 @@ contains
     procedure(limiter), pointer, intent(in)  :: f_limiter
 
     ! WENO3 definitions
-    
+
     real, dimension(size(q,1))               :: w0, w1
     real, dimension(size(q,1))               :: alpha0, alpha1
     real, dimension(size(q,1))               :: beta0, beta1
@@ -258,7 +258,7 @@ contains
        !! The WENO scheme is self-similar. The same applies to ESWENO.
        !! The grid spacing \Delta x is replaced with the grid spacing
        !! in the computational domain \Delta xi = 1/j, where j is the
-       !! total number of gird cells. 
+       !! total number of gird cells.
        !<
 
        ! \Delta xi is mentioned before Eq. 63
@@ -268,13 +268,13 @@ contains
        !>
        !! Sec 4.3
        !! The value of the tuning parameter "epsilon" is based on
-       !! truncation error analysis. In Eq. 21 (or Eq. 19) this 
-       !! term epsilon is added with beta_r. Hence, it should be 
+       !! truncation error analysis. In Eq. 21 (or Eq. 19) this
+       !! term epsilon is added with beta_r. Hence, it should be
        !! scaled consistently. The terms beta_r are ~ u_\xi^2 \Delta xi^2
        !! near smooth regions and ~ u^2 near unresolved regions.
        !! Therefore, epsilon can be chosen as:
-       !! epsilon = max( L1norm(u_0^2), L1norm(u_0_\xi^2))*\Delta xi^2, 
-       !! where \xi != \xi_d, and L1_norm = sum ( abs(x(:)) ). The terms 
+       !! epsilon = max( L1norm(u_0^2), L1norm(u_0_\xi^2))*\Delta xi^2,
+       !! where \xi != \xi_d, and L1_norm = sum ( abs(x(:)) ). The terms
        !! u_0 is the "initial condition", and u_0_\xi^2 is the "initial condition"
        !! discarding the set of points \xi_d where it is discontinuous.
        !! The term epsilon is calculated only once, and same value is used
@@ -363,7 +363,7 @@ contains
     use domain,       only: dom
     use fluxlimiters, only: limiter
     use domain,       only: dom
-    
+
     implicit none
 
     real, dimension(:,:),          intent(in)  :: q
@@ -395,11 +395,11 @@ contains
     if (any(shape(ql) /= shape(qr))) call die("[interpolations:parabolic] face vectors of different lengths")
 
     ! PPM requires 5 zones, 0, \pm 1, \pm 2
-    
+
     do i = 3, n-2
-    
-       qm2 = q(:, i-1) - q(:, i-2) 
-       qm1 = q(:, i)   - q(:, i-1) 
+
+       qm2 = q(:, i-1) - q(:, i-2)
+       qm1 = q(:, i)   - q(:, i-1)
        qp1 = q(:, i+1) - q(:, i)
        qp2 = q(:, i+2) - q(:, i+1)
 
@@ -418,9 +418,9 @@ contains
        ! Eq. 9.60
        ! To ensure that U^n_j+1/2 does not fall outside the range of the two adjacent values U^n_j and U^n_j+1
 
-       delta_q_ip1_2 = (sign(one, q(:, i+1)) + sign(one, q(:, i)))*min(abs(q(:, i+1)),abs(q(:, i)))*half !delta_q_ip1_2 = half*(q(:,i+1)-q(:,i)) 
+       delta_q_ip1_2 = (sign(one, q(:, i+1)) + sign(one, q(:, i)))*min(abs(q(:, i+1)),abs(q(:, i)))*half !delta_q_ip1_2 = half*(q(:,i+1)-q(:,i))
        delta_q_im1_2 = (sign(one, q(:, i)) + sign(one, q(:, i-1)))*min(abs(q(:, i)),abs(q(:, i-1)))*half !delta_q_im1_2 = half*(q(:,i)-q(:,i-1))
-       
+
        where (delta_q_ip1_2(:)*delta_q_im1_2(:).gt.zero)
 
           ! min( |\delta U^n_j|, 2|U^n_j - U^n_j-1|, 2|U^n_j+1 - U^n_j| ) sign(\delta U^n_j)
@@ -435,20 +435,19 @@ contains
           delta_q_i   = zero
           delta_q_ip1 = zero
           delta_q_im1 = zero
-          
-       end where
+
+       endwhere
 
        ! Eq. 9.59
-       
+
        ql(:, i)   = half*( q(:, i) + q(:, i+1) ) + onesth*(delta_q_i   - delta_q_ip1)
        qr(:, i-1) = half*( q(:, i) + q(:, i-1) ) + onesth*(delta_q_im1 - delta_q_i)
 
-
        if (.false.) qr = f_limiter(q)  ! suppress compiler worning on argument needed for other interpolation scheme
-       
-    end do
 
-    
+    enddo
+
+
     ! Q&D: fix for FPE
     ! ToDo: handle it properly
     ql(:, :2) = q(:, :2)
