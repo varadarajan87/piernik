@@ -359,7 +359,8 @@ contains
 
 
     use constants,    only: GEO_XYZ, onesth, half, zero, two, one
-    use dataio_pub,   only: die, msg
+    use dataio_pub,   only: die, msg, warn
+    use domain,       only: dom
     use fluxlimiters, only: limiter
     use domain,       only: dom
     
@@ -382,12 +383,16 @@ contains
 
     n = size(q, in)
 
-    if (dom%geometry_type /= GEO_XYZ) call die("[interpolations:linear] non-cartesian geometry not implemented yet.")
+    if (dom%nb < 5) call warn("[interpolations:parabolic] This interpolation may require at least 5 guardcells or artifacts may occur along internal and external boundaries!")
+    ! ToDo: automagically detect nb requirements
+    ! Or at least find the minimum manually for all combination of interpolations and integrators
+
+    if (dom%geometry_type /= GEO_XYZ) call die("[interpolations:parabolic] non-cartesian geometry not implemented yet.")
     if (size(q, in) - size(ql, in) /= 1) then
-       write(msg, '(2(a,2i7),a)')"[interpolations:linear] face vector of wrong length: ", size(q, in), size(ql, in), " (expecting: ", size(q, in), size(q, in)-1, ")"
+       write(msg, '(2(a,2i7),a)')"[interpolations:parabolic] face vector of wrong length: ", size(q, in), size(ql, in), " (expecting: ", size(q, in), size(q, in)-1, ")"
        call die(msg)
     endif
-    if (any(shape(ql) /= shape(qr))) call die("[interpolations:linear] face vectors of different lengths")
+    if (any(shape(ql) /= shape(qr))) call die("[interpolations:parabolic] face vectors of different lengths")
 
     ! PPM requires 5 zones, 0, \pm 1, \pm 2
     
@@ -446,9 +451,12 @@ contains
     
     ! Q&D: fix for FPE
     ! ToDo: handle it properly
-    ql(:, 2) = q(:, 2)
-    qr(:, n-2) = q(:, n-1)
-    
+    ql(:, :2) = q(:, :2)
+    ql(:, n-1) = q(:, n-1)
+
+    qr(:, 1) = q(:, 2)
+    qr(:, n-2:) = q(:, n-1:)
+
   end subroutine parabolic
 
 end module interpolations
