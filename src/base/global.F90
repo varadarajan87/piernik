@@ -40,11 +40,12 @@ module global
    private
    public :: cleanup_global, init_global, &
         &    cfl, cfl_max, cflcontrol, cfl_violated, &
-        &    dt, dt_initial, dt_max_grow, dt_min, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
+        &    dt, dt_initial, dt_max_grow, dt_min, dt_max, dt_old, dtm, t, t_saved, nstep, nstep_saved, &
         &    integration_order, limiter, limiter_b, smalld, smallei, smallp, use_smalld, h_solver, interpol_str, &
         &    relax_time, grace_period_passed, cfr_smooth, repeat_step, skip_sweep, geometry25D, &
         &    dirty_debug, do_ascii_dump, show_n_dirtys, no_dirty_checks, sweeps_mgu, use_fargo, print_divB, &
-        &    divB_0_method, force_cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon
+        &    divB_0_method, force_cc_mag, glm_alpha, use_eglm, cfl_glm, ch_grid, w_epsilon, psi_bnd
+
 
    real, parameter :: dt_default_grow = 2.
    logical         :: cfl_violated             !< True when cfl condition is violated
@@ -56,12 +57,14 @@ module global
    real            :: t, dt, dt_old, dtm, t_saved
    integer         :: divB_0_method            !< encoded method of making div(B) = 0 (currently DIVB_CT or DIVB_HDC)
    logical         :: force_cc_mag             !< treat magnetic field as cell-centered in the Riemann solver (temporary hack)
+   integer         :: psi_bnd                  !< BND_INVALID or enforce some other psi boundary
 
    ! Namelist variables
 
    real    :: dt_initial               !< initial timestep
    real    :: dt_max_grow              !< maximum timestep growth rate
    real    :: dt_min                   !< minimum allowed timestep
+   real    :: dt_max                   !< maximum allowed timestep
    real    :: cfl                      !< desired Courant–Friedrichs–Lewy number
    real    :: cfl_max                  !< warning threshold for the effective CFL number achieved
    logical :: use_smalld               !< correct density when it gets lower than smalld
@@ -83,6 +86,7 @@ module global
    character(len=cbuff_len)      :: h_solver          !< type of hydro solver
    character(len=cbuff_len)      :: interpol_str      !< type of interpolation
    character(len=cbuff_len)      :: divB_0            !< human-readable method of making div(B) = 0 (currently CT or HDC)
+   character(len=cbuff_len)      :: psi_bnd_str       !< "default" for general boundaries or override ith something special
    logical                       :: repeat_step       !< repeat fluid step if cfl condition is violated (significantly increases mem usage)
    logical, dimension(xdim:zdim) :: skip_sweep        !< allows to skip sweep in chosen direction
    logical                       :: sweeps_mgu        !< Mimimal Guardcell Update in sweeps
@@ -94,9 +98,9 @@ module global
    logical                       :: ch_grid           !< When true use grid properties to estimate ch (psi wave propagation speed). Use gas properties otherwise.
    real                          :: w_epsilon         !< small number for safe evaluation of weights in WENO interpolation
 
-   namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, &
+   namelist /NUMERICAL_SETUP/ cfl, cflcontrol, cfl_max, use_smalld, smalld, smallei, smallc, smallp, dt_initial, dt_max_grow, dt_min, dt_max, &
         &                     repeat_step, limiter, limiter_b, relax_time, integration_order, cfr_smooth, skip_sweep, geometry25D, sweeps_mgu, print_divB, &
-        &                     use_fargo, h_solver, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon
+        &                     use_fargo, h_solver, divB_0, glm_alpha, use_eglm, cfl_glm, ch_grid, interpol_str, w_epsilon, psi_bnd_str
 
 contains
 
@@ -123,6 +127,7 @@ contains
 !!   <tr><td>dt_initial       </td><td>-1.    </td><td>positive real value or -1.           </td><td>\copydoc global::dt_initial       </td></tr>
 !!   <tr><td>dt_max_grow      </td><td>2.     </td><td>real value > 1.1                     </td><td>\copydoc global::dt_max_grow      </td></tr>
 !!   <tr><td>dt_min           </td><td>0.     </td><td>positive real value                  </td><td>\copydoc global::dt_min           </td></tr>
+!!   <tr><td>dt_max           </td><td>0.     </td><td>positive real value                  </td><td>\copydoc global::dt_max           </td></tr>
 !!   <tr><td>limiter          </td><td>vanleer</td><td>string                               </td><td>\copydoc global::limiter          </td></tr>
 !!   <tr><td>limiter_b        </td><td>moncen </td><td>string                               </td><td>\copydoc global::limiter_b        </td></tr>
 !!   <tr><td>relax_time       </td><td>0.0    </td><td>real value                           </td><td>\copydoc global::relax_time       </td></tr>
@@ -133,15 +138,17 @@ contains
 !!   <tr><td>divB_0           </td><td>CT     </td><td>string                               </td><td>\copydoc global::divB_0           </td></tr>
 !!   <tr><td>glm_alpha        </td><td>0.1    </td><td>real value                           </td><td>\copydoc global::glm_alpha        </td></tr>
 !!   <tr><td>use_eglm         </td><td>false  </td><td>logical value                        </td><td>\copydoc global::use_eglm         </td></tr>
-!!   <tr><td>print_divB       </td><td>0      </td><td>integer value                        </td><td>\copydoc global::print_divB       </td></tr>
+!!   <tr><td>print_divB       </td><td>100    </td><td>integer value                        </td><td>\copydoc global::print_divB       </td></tr>
 !!   <tr><td>ch_grid          </td><td>false  </td><td>logical value                        </td><td>\copydoc global::ch_grid          </td></tr>
 !!   <tr><td>w_epsilon        </td><td>1e-10  </td><td>real                                 </td><td>\copydoc global::w_epsilon        </td></tr>
+!!   <tr><td>psi_bnd_str      </td><td>"default" </td><td>string                            </td><td>\copydoc global::psi_bnd_str      </td></tr>
 !! </table>
 !! \n \n
 !<
    subroutine init_global
 
-      use constants,  only: big_float, PIERNIK_INIT_MPI, INVALID, DIVB_CT, DIVB_HDC
+      use constants,  only: big_float, PIERNIK_INIT_MPI, INVALID, DIVB_CT, DIVB_HDC, &
+           &                BND_INVALID, BND_ZERO, BND_REF, BND_OUT
       use dataio_pub, only: die, msg, warn, code_progress, printinfo
       use dataio_pub, only: nh  ! QA_WARN required for diff_nml
       use mpisetup,   only: cbuff, ibuff, lbuff, rbuff, master, slave, piernik_MPI_Bcast
@@ -188,6 +195,7 @@ contains
       dt_initial  = -1.              !< negative value indicates automatic choice of initial timestep
       dt_max_grow = dt_default_grow  !< for sensitive setups consider setting this as low as 1.1
       dt_min      = tiny(1.)
+      dt_max      = huge(1.)
       relax_time  = 0.
       integration_order  = 2
       use_fargo   = .false.
@@ -198,6 +206,7 @@ contains
       cfl_glm     = cfl
       ch_grid     = .false.
       w_epsilon   = 1e-10
+      psi_bnd_str = "default"
 
       if (master) then
          if (.not.nh%initialized) call nh%init()
@@ -238,6 +247,7 @@ contains
          cbuff(4) = h_solver
          cbuff(5) = divB_0
          cbuff(6) = interpol_str
+         cbuff(7) = psi_bnd_str
 
          ibuff(1) = integration_order
          ibuff(2) = print_divB
@@ -251,11 +261,12 @@ contains
          rbuff( 7) = dt_initial
          rbuff( 8) = dt_max_grow
          rbuff( 9) = dt_min
-         rbuff(10) = cfl_max
-         rbuff(11) = relax_time
-         rbuff(12) = glm_alpha
-         rbuff(13) = cfl_glm
-         rbuff(14) = w_epsilon
+         rbuff(10) = dt_max
+         rbuff(11) = cfl_max
+         rbuff(12) = relax_time
+         rbuff(13) = glm_alpha
+         rbuff(14) = cfl_glm
+         rbuff(15) = w_epsilon
 
          lbuff(1)   = use_smalld
          lbuff(2)   = repeat_step
@@ -293,11 +304,12 @@ contains
          dt_initial  = rbuff( 7)
          dt_max_grow = rbuff( 8)
          dt_min      = rbuff( 9)
-         cfl_max     = rbuff(10)
-         relax_time  = rbuff(11)
-         glm_alpha   = rbuff(12)
-         cfl_glm     = rbuff(13)
-         w_epsilon   = rbuff(14)
+         dt_max      = rbuff(10)
+         cfl_max     = rbuff(11)
+         relax_time  = rbuff(12)
+         glm_alpha   = rbuff(13)
+         cfl_glm     = rbuff(14)
+         w_epsilon   = rbuff(15)
 
          limiter    = cbuff(1)
          limiter_b  = cbuff(2)
@@ -305,6 +317,7 @@ contains
          h_solver   = cbuff(4)
          divB_0     = cbuff(5)
          interpol_str = cbuff(6)
+         psi_bnd_str = cbuff(7)
 
          integration_order = ibuff(1)
          print_divB        = ibuff(2)
@@ -332,6 +345,19 @@ contains
             force_cc_mag = .false.
          case default
             call die("[global:init_global] unrecognized divergence cleaning method.")
+      end select
+
+      select case (psi_bnd_str)
+         case ('default')
+            psi_bnd = BND_INVALID  ! special value,; means: do not override domain boundaries
+         case ('zero')
+            psi_bnd = BND_ZERO
+         case ('ref', 'refl', 'reflecting')
+            psi_bnd = BND_REF
+         case ('out', 'free')
+            psi_bnd = BND_OUT
+         case default
+            call die("[global:init_global] unrecognized psi boundaries")
       end select
 
 #ifdef RTVD
