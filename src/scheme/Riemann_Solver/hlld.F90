@@ -327,6 +327,13 @@ contains
           b_starl(xdim)  =  b_ccl(xdim,i)
           b_starr(xdim)  =  b_ccr(xdim,i)
 
+          ! GLM
+          
+          if(divB_0_method .eq. DIVB_HDC) then
+             b_starl(xdim) = b_ccl(xdim,i)
+             b_starr(xdim) = b_ccr(xdim,i)
+          end if
+          
           ! Transversal components of magnetic field for left states (Eq. 45 & 47), taking degeneracy into account
           coeff_1  =  dn_l*slsm - b_lr
           if (has_energy) ue = ul(ien,i)
@@ -446,6 +453,14 @@ contains
                 v_2star(ydim:zdim) = ((dn_lsqt*v_starl(ydim:zdim) + dn_rsqt*v_starr(ydim:zdim)) + b_sig*(b_starr(ydim:zdim) - b_starl(ydim:zdim)))/add_dnsq
 
                 b_2star(xdim)      = b_ccl(xdim,i)
+
+                !GLM
+                
+                if(divB_0_method .eq. DIVB_HDC) then
+                   b_2star(xdim)   = b_ccl(xdim,i)
+                   psi_2star       = psil(1,i)
+                end if
+                
                 b_2star(ydim:zdim) = ((dn_lsqt*b_starr(ydim:zdim) + dn_rsqt*b_starl(ydim:zdim)) + b_sig*mul_dnsq*(v_starr(ydim:zdim) - v_starl(ydim:zdim)))/add_dnsq
 
                 ! Dot product of velocity and magnetic field
@@ -464,11 +479,19 @@ contains
 
                 endif
 
-                 ! GLM
-                   if (divB_0_method .eq. DIVB_HDC) then
-                      psi_2star = psil(1,i)
-                   endif
+                ! GLM
+                !if (divB_0_method .eq. DIVB_HDC) then
+                !  psi_2star = psil(1,i)
+                !endif
 
+                ! GLM
+                if (divB_0_method .eq. DIVB_HDC) then
+                   b_2star = b_ccr(xdim,i)
+                   psi_2star = psir(1,i)
+                endif
+
+                vb_2star = sum(v_2star*b_2star) 
+                
                 if (sm <= zero) then
                    ! Conservative variables for right Alfven intermediate state
                    u_2starr(idn)  =  u_starr(idn)
@@ -480,9 +503,10 @@ contains
                 endif
 
                 ! GLM
-                   if (divB_0_method .eq. DIVB_HDC) then
-                      psi_2star = psir(1,i)
-                   endif
+                !if (divB_0_method .eq. DIVB_HDC) then
+                !   b_2star = b_ccr(xdim,i)
+                !   psi_2star = psir(1,i)
+                !endif
 
                 if (sm > zero) then
                    ! Left Alfven intermediate flux Eq. 65
