@@ -1,0 +1,17 @@
+#! /bin/bash -l
+#SBATCH -J "name"
+#SBATCH --nodes=16
+#SBATCH --ntasks-per-node=16
+#SBATCH --mem-per-cpu=500MB
+#SBATCH --time=7-00:00:00
+#SBATCH -p para
+#SBATCH --output="piernik.out"
+#SBATCH --error="piernik.err"
+
+cd /work/chuck/"user"/"piernik_dir"/
+module purge
+module load mpi/mvapich2-2.2-x86_64
+time srun --mpi=pmi2 ./piernik
+
+##module load mpi/openmpi-2.1-x86_64
+##SBATCH -A camk
