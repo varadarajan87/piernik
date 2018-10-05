@@ -5,7 +5,7 @@
 # -fcheck=all
 ################################################################################
 PROG     = piernik
-F90       = h5pfc
+F90       = h5pfc # PATH set in .bash_profile
 F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none -g -I/usr/include
 F90FLAGS += -O3 -funroll-loops -fno-stack-arrays
 F90FLAGS += -Wall -Wextra -W -Wsurprising -Wcharacter-truncation -Wno-unused-function -pedantic
@@ -17,4 +17,5 @@ F90FLAGS +=  -ffpe-trap=invalid,zero,overflow
 LDFLAGS   = -Wl,--as-needed -Wl,-O1
 MAKEFLAGS += -j4
 F90FLAGS += -I/usr/include
+
 
