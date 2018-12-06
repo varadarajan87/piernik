@@ -1,0 +1,10 @@
+#define IONIZED
+#define MAGNETIC
+#define GRAV
+
+#undef RESISTIVE
+#undef MULTIGRID
+
+#if !defined GLOBAL_FR_SPEED
+#    define LOCAL_FR_SPEED
+#endif
