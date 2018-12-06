@@ -1,0 +1,87 @@
+$BASE_DOMAIN
+  n_d    = 3*64
+  bnd_xl = 'out'
+  bnd_xr = 'out'
+  bnd_yl = 'out'
+  bnd_yr = 'out'
+  bnd_zl = 'out'
+  bnd_zr = 'out'
+  xmin   = -2.
+  xmax   =  2.
+  ymin   = -2.
+  ymax   =  2.
+  zmin   = -2.
+  zmax   =  2.
+/
+
+$MPI_BLOCKS
+/
+
+$UNITS
+   units_set = "cgs"
+/
+
+$RESTART_CONTROL
+   restart  = 'none'
+   res_id   = ''
+   nrestart = 0
+/
+
+$END_CONTROL
+   tend = 0.1
+   nend = 1
+/
+
+$OUTPUT_CONTROL
+   problem_name = 'mag_ellip'
+   run_id       = 'me1'
+   dt_hdf       = 10.0
+   dt_res       = 0.0
+   dt_log       = 0.01
+   dt_tsl       = 0.01
+   vars(1,:)    = 'dens', 'magx', 'magy', 'pres', 'velx', 'vely', 'velz', 'magB', 'divbc'
+/
+
+$FLUID_IONIZED
+   gamma    = 1.4
+   selfgrav = .true.
+/
+
+$FLUID_NEUTRAL
+   gamma    = 1.67
+   seflgrav = .true.
+/
+
+$NUMERICAL_SETUP
+   cfl       = 0.6
+   smalld    = 1.e-20
+   smallei   = 1.e-20
+   h_solver  = 'rk2'
+   interpol_str = 'linear'
+   glm_alpha = 0.3
+/
+
+$GRAVITY
+/
+
+$RESISTIVITY
+/
+
+$PROBLEM_CONTROL
+/
+
+$AMR
+/
+
+$MULTIGRID_SOLVER
+/
+
+$MULTIGRID_GRAVITY
+/
+
+$SHEARING
+/
+
+$INTERACTIONS
+/
+
