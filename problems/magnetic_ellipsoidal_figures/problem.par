@@ -68,6 +68,12 @@ $RESISTIVITY
 /
 
 $PROBLEM_CONTROL
+   a1 = 1.0
+   a2 = 1.0
+   a3 = 0.6
+   alpha = 1.0
+   beta  = 1.0
+   bg_dens = 1.e-6
 /
 
 $AMR
