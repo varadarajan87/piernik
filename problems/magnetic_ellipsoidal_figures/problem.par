@@ -58,7 +58,7 @@ $NUMERICAL_SETUP
    smallei   = 1.e-20
    h_solver  = 'rk2'
    interpol_str = 'linear'
-   glm_alpha = 0.3
+   glm_alpha = 0.2
 /
 
 $GRAVITY
@@ -73,7 +73,8 @@ $PROBLEM_CONTROL
    a3 = 0.6
    alpha = 1.0
    beta  = 1.0
-   bg_dens = 1.e-6
+   bg_dens = 1.e-8
+   dens_uni = 1.0
 /
 
 $AMR
