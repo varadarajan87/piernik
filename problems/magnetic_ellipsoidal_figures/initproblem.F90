@@ -115,6 +115,7 @@ contains
     use fluidindex,  only: flind
     use fluidtypes,  only: component_fluid
     use func,        only: ekin, emag
+    use units,       only: newtong
 
     implicit none
 
@@ -124,10 +125,32 @@ contains
 
     integer                         :: i,j,k
     real                            :: pres_star, bg_pres
-    real                            :: zeta0, Omega
+    real                            :: zeta0, Omega, Omega2
     real                            :: C_p, C_B
+    real                            :: Z
     real                            :: I, A1, A2, A3, eccty
 
+    eccty = sqrt(one - (a3/a1)**two)
+    A1    = (sqrt(one - eccty**two)/e**3.0)*asin(eccty) - (one - eccty**two)/e**two
+    A2    = A1
+    A3    = two/eccty**two - two*(sqrt(one - eccty**two)/e**3.0)*asin(e)
+    I     = a1**two * A1 + a2**two * A2 + a3**two * A3 
+    C_p   = (-(I - A1*a1**two - A2*a2**two - A3*a3**two)) + &
+               zeta0**2*(alpha**two * a1**two + beta**two * a2**two)/(two*(alpha + beta)**two) - &
+                ( (zeta0**two/(two*(alpha + beta))) + one )*(alpha*a1**two + beta*a2**two)
+    !C_p = ( A2 - zeta0**two* ( ((a1**two * a2**two)/(two*(a1**two+a2**two)**two))  + Z*(a1/a2)**two  ) )*a2**two - ( I )
+    C_B  = 4.0*pi*dens_uni*(alpha*a1**two + beta*a2**two)
+    !Determine after fixing units
+    Omega2 = two*sqrt((one - eccty**two))*(3.0 - two*eccty**two)*asin(eccty)/e**3.0 - 6.0*(one - e**two)/e**two ! In units of pi.G.\rho
+    Omega  = sqrt(Omega2) ! In units of sqrt(pi.G.\rho)
+    zeta0  = two*Omega
+    Z      = alpha/zeta0**two
+
+    ! Background is basically a vacuum. For numerical considerations we prescribe a 
+    ! small density with no initial motion and no magentic fields.
+    ! We do not consider the background fluid to interact with the ellipsoid at t = 0. 
+    ! Hence from hydrostatic equilibrium the pressure is also uniform. 
+    bg_pres = bg_dens
 
     fl  => flind%ion
     cgl => leaves%first
@@ -136,36 +159,10 @@ contains
        
        cg => cgl%cg
 
-        do k = cg%ks, cg%ke
+       do k = cg%ks, cg%ke
           do j = cg%js, cg%je
              do i = cg%is, cg%ie
                 
-                eccty = sqrt(one - (a3/a1)**two)
-                A1 = (sqrt(one - eccty**two)/e**3.0)*asin(eccty) - (one - eccty**two)/e**two
-                A2 = A1
-                A3 = two/eccty**two - two*(sqrt(one - eccty**two)/e**3.0)*asin(e**3.0)
-                I  = a1**two * A1 + a2**two * A2 + a3**two * A3 
-                C_p = (-(I - A1*a1**two - A2*a2**two - A3*a3**two)) + &
-                         zeta0**2*(alpha**two * a1**two + beta**two * a2**two)/(two*(alpha + beta)**two) - &
-                           ( (zeta0**two/(two*(alpha + beta)**two)) + one )*(alpha*a1**two + beta*a2**two)
-                C_B = 4.0*pi*dens_uni*(alpha*a1**two + beta*a2**two)
-                
-                !Determine after fixing units
-                !Omega = 
-                !zeta0 = two*Omega
- 
-                ! Pressure of the star. Eq.(15) 
-                pres_star = dens_uni*( (I - A1*cg%x(i)*cg*x(i) - A2*cg%y(j)*cg%y(j) -A3*cg%z(k)*cg%z(k)) - &
-                                            zeta0**two*(alpha**two * cg%x(i)*cg%x(i) + beta**two * cg%y(j)*cg%y(j))/(two*(alpha + beta)**two) + &
-                                             ( (zeta0**2/(2*(alpha + beta))) + one )*(alpha*cg%x(i)*cg%x(i) + beta*cg%y(j)*cg%y(j)) + C_p )
-
-                ! Background is basically a vacuum. For numerical considerations we prescribe a 
-                ! small density with no initial motion and no magentic fields.
-                ! We do not consider the background fluid to interact with the ellipsoid at t = 0. 
-                ! Hence from hydrostatic equilibrium the pressure is also uniform. 
-                bg_pres = bg_dens
-
-
                 cg%u(fl%imx,i,j,k) = zero
                 cg%u(fl%imy,i,j,k) = zero
                 cg%u(fl%imz,i,j,k) = zero
@@ -173,25 +170,29 @@ contains
                 cg%b(ydim,i,j,k)   = zero
                 cg%b(zdim,i,j,k)   = zero
 
+                ! Pressure of the star. Eq.(15) 
+                pres_star = dens_uni*( (I - A1*cg%x(i)*cg*x(i) - A2*cg%y(j)*cg%y(j) -A3*cg%z(k)*cg%z(k)) - &
+                                            zeta0**two*(alpha**two * cg%x(i)*cg%x(i) + beta**two * cg%y(j)*cg%y(j))/(two*(alpha + beta)**two) + &
+                                            ( (zeta0**2/(2*(alpha + beta))) + one )*(alpha*cg%x(i)*cg%x(i) + beta*cg%y(j)*cg%y(j)) + C_p )
+                
                 if(pres_star .gt. bg_pres) then
-
+                   
                    cg%u(fl%idn,i,j,k) = dens_uni
                    cg%u(fl%imx,i,j,k) = -cg%u(fl%idn,i,j,k)*zeta0*(beta*cg%y(j))/(alpha + beta)
                    cg%u(fl%imy,i,j,k) = cg%u(fl%idn,i,j,k)*zeta0*(alpha*cg%x(i))/(alpha + beta)
-                   cg%u(fl%imz,i,j,k) = zero
                    cg%b(zdim,i,j,k)   = sqrt(two*(C_B - 4.0*pi*dens_uni*(alpha*cg%x(i)*cg%x(i) + beta*cg%y(j)*cg%y(j))))
                    cg%u(fl%ien,i,j,k) = pres_star/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
-                                             emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
+                        emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
                    
                 else 
-
+                   
                    cg%u(fl%idn,i,j,k) = bg_dens
                    cg%u(fl%ien,i,j,k) = bg_pres/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
-                                             emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
+                        emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
                    
-
+                   
                 end if
-
+                
              end do
           end do
        end do
