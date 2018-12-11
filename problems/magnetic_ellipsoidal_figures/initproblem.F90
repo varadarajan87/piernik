@@ -58,7 +58,7 @@ contains
 
     use dataio_pub, only: nh
     use mpisetup,   only: rbuff, master, slave, PIERNIK_MPI_Bcast
-    
+
     implicit none
 
     a1 = 1.e6
@@ -70,8 +70,8 @@ contains
     bg_pres = 1.e-8
     dens_uni = 1.e14
 
-    if(master) then
-    
+    if (master) then
+
         if (.not.nh%initialized) call nh%init()
          open(newunit=nh%lun, file=nh%tmp1, status="unknown")
          write(nh%lun,nml=PROBLEM_CONTROL)
@@ -113,11 +113,11 @@ contains
         dens_uni = rbuff(8)
 
       endif
-      
+
   end subroutine read_problem_par
 !-----------------------------------------------------------------------------------------------------------------
   subroutine problem_initial_conditions
-    
+
     use cg_leaves,   only: leaves
     use cg_list,     only: cg_list_element
     use constants,   only: xdim, ydim, zdim, one, zero, two, pi
@@ -150,7 +150,7 @@ contains
     I_ellip     = a1**two * AA1 + a2**two * AA2 + a3**two * AA3 ! Defined after Eq(16) in Kawa11
 
     ! SC Eq(6), Ch 5
-    Omega2 = (two*sqrt((one - eccty**two))*(3.0 - two*eccty**two)*asin(eccty)/eccty**3.0 - 6.0*(one - eccty**two)/eccty**two)*pi*newtong*dens_uni 
+    Omega2 = (two*sqrt((one - eccty**two))*(3.0 - two*eccty**two)*asin(eccty)/eccty**3.0 - 6.0*(one - eccty**two)/eccty**two)*pi*newtong*dens_uni
     Omega  = sqrt(Omega2) ! T = 2*pi/Omega = 2.55265390e-3 sec, Omega = 2461.432513 sec^{-1}
 
     ! Kawa11 Eq(18)
@@ -164,18 +164,18 @@ contains
     !C_p = ( AA2 - zeta0**two* ( ((a1**two * a2**two)/(two*(a1**two+a2**two)**two))  + Z*(a1/a2)**two  ) )*a2**two - ( I ) ! Kawa11 Eq(19)
     ! Kawa11 from Eq(12)
     C_B  = 4.0*pi*dens_uni*(alpha*a1**two + beta*a2**two)
-   
+
     fl  => flind%ion
     cgl => leaves%first
 
     do while (associated(cgl))
-       
+
        cg => cgl%cg
 
        do k = cg%ks, cg%ke
           do j = cg%js, cg%je
              do i = cg%is, cg%ie
-                
+
                 cg%u(fl%imx,i,j,k) = zero
                 cg%u(fl%imy,i,j,k) = zero
                 cg%u(fl%imz,i,j,k) = zero
@@ -183,34 +183,34 @@ contains
                 cg%b(ydim,i,j,k)   = zero
                 cg%b(zdim,i,j,k)   = zero
 
-                ! Pressure of the star. Eq.(15) 
+                ! Pressure of the star. Eq.(15)
                 pres_star = dens_uni*( pi*newtong*dens_uni*(I_ellip - AA1*cg%x(i)*cg%x(i) - AA2*cg%y(j)*cg%y(j) -AA3*cg%z(k)*cg%z(k)) - &
                                             zeta0**two*(alpha**two * cg%x(i)*cg%x(i) + beta**two * cg%y(j)*cg%y(j))/(two*(alpha + beta)**two) + &
                                             ( (zeta0**2/(2*(alpha + beta))) + one )*(alpha*cg%x(i)*cg%x(i) + beta*cg%y(j)*cg%y(j)) + C_p )
-                
-                if(pres_star .gt. bg_pres) then
-                   
+
+                if (pres_star .gt. bg_pres) then
+
                    cg%u(fl%idn,i,j,k) = dens_uni
                    cg%u(fl%imx,i,j,k) = -cg%u(fl%idn,i,j,k)*zeta0*(beta*cg%y(j))/(alpha + beta) ! Kawa11 Eq(6)
                    cg%u(fl%imy,i,j,k) = cg%u(fl%idn,i,j,k)*zeta0*(alpha*cg%x(i))/(alpha + beta) ! Kawa11 Eq(6)
                    cg%b(zdim,i,j,k)   = sqrt(two*(C_B - 4.0*pi*dens_uni*(alpha*cg%x(i)*cg%x(i) + beta*cg%y(j)*cg%y(j)))) ! Kawa11 Eq(12)
                    cg%u(fl%ien,i,j,k) = pres_star/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
                         emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
-                   
-                else 
-                   
+
+                else
+
                    cg%u(fl%idn,i,j,k) = bg_dens
                    cg%u(fl%ien,i,j,k) = bg_pres/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
                         emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
-                   
-                   
-                end if
-                
-             end do
-          end do
-       end do
+
+
+                endif
+
+             enddo
+          enddo
+       enddo
        cgl => cgl%nxt
-    end do
+    enddo
 
   end subroutine problem_initial_conditions
 !----------------------------------------------------------------------------------------------------------------
@@ -238,32 +238,32 @@ contains
     AA1    = (sqrt(one - eccty**two)/eccty**3.0)*asin(eccty) - (one - eccty**two)/eccty**two
     AA2    = AA1
     AA3    = two/eccty**two - two*(sqrt(one - eccty**two)/eccty**3.0)*asin(eccty)
-    I_ellip     = a1**two * AA1 + a2**two * AA2 + a3**two * AA3 
+    I_ellip     = a1**two * AA1 + a2**two * AA2 + a3**two * AA3
 
     fl  => flind%ion
     cgl => leaves%first
 
     do while (associated(cgl))
-       
+
        cg => cgl%cg
 
-       if(.not. cg%is_old) then
+       if (.not. cg%is_old) then
 
           do k = cg%ks, cg%ke
              do j = cg%js, cg%je
                 do i = cg%is, cg%ie
                    cg%u(fl%idn,i,:,k) = dens_uni
                    cg%gp(i,j,k) = -pi*newtong*cg%u(fl%idn,i,j,k)*(I - AA1*cg%x(i)*cg%x(i) - AA2*cg%y(j)*cg%y(j) - AA3*cg%z(k)*cg%z(k)) ! SC Eq(40) Ch 3
-                end do
-             end do
-          end do
+                enddo
+             enddo
+          enddo
 
-       end if
+       endif
 
          cgl => cgl%nxt
 
-    end do
-    
+    enddo
+
   end subroutine ellipsoid_grav_pot_3d
 
 !----------------------------------------------------------------------------------------------------------------
