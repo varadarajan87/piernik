@@ -35,9 +35,9 @@ module initproblem
   private
   public :: read_problem_par, problem_pointers, problem_initial_conditions
 
-  real   ::  a1, a2, a3, alpha, beta, bg_dens, dens_uni
+  real   ::  a1, a2, a3, alpha, beta, bg_dens, bg_pres, dens_uni
 
-  namelist /PROBLEM_CONTROL/ a1, a2, a3, alpha, beta, bg_dens, dens_uni
+  namelist /PROBLEM_CONTROL/ a1, a2, a3, alpha, beta, bg_dens, bg_pres, dens_uni
 
 contains
 !-----------------------------------------------------------------------------------------------------------------
@@ -54,13 +54,14 @@ contains
     
     implicit none
 
-    a1 = 1.0
-    a2 = 1.0
-    a3 = 0.6
+    a1 = 1.e6
+    a2 = 1.e6
+    a3 = 0.6e6
     alpha = 1.0
     beta  = 1.0
-    bg_dens = 1.e-6
-    dens_uni = 1.0
+    bg_dens = 1.e-8
+    bg_pres = 1.e-8
+    dens_uni = 1.e14
 
     if(master) then
     
@@ -86,7 +87,8 @@ contains
          rbuff(4) = alpha
          rbuff(5) = beta
          rbuff(6) = bg_dens
-         rbuff(7) = dens_uni
+         rbuff(7) = bg_pres
+         rbuff(8) = dens_uni
 
       endif
 
@@ -100,7 +102,8 @@ contains
         alpha = rbuff(4)
         beta  = rbuff(5)
         bg_dens = rbuff(6)
-        dens_uni = rbuff(7)
+        bg_pres = rbuff(7)
+        dens_uni = rbuff(8)
 
       endif
       
@@ -110,7 +113,7 @@ contains
     
     use cg_leaves,   only: leaves
     use cg_list,     only: cg_list_element
-    use constants,   only: xdim, ydim, zdim, one, zero, two
+    use constants,   only: xdim, ydim, zdim, one, zero, two, pi
     use grid_cont,   only: grid_container
     use fluidindex,  only: flind
     use fluidtypes,  only: component_fluid
@@ -135,22 +138,16 @@ contains
     A2    = A1
     A3    = two/eccty**two - two*(sqrt(one - eccty**two)/e**3.0)*asin(e)
     I     = a1**two * A1 + a2**two * A2 + a3**two * A3 
-    C_p   = (-(I - A1*a1**two - A2*a2**two - A3*a3**two)) + &
+    C_p   = (-pi*newtong*dens_uni*(I - A1*a1**two - A2*a2**two - A3*a3**two)) + &
                zeta0**2*(alpha**two * a1**two + beta**two * a2**two)/(two*(alpha + beta)**two) - &
                 ( (zeta0**two/(two*(alpha + beta))) + one )*(alpha*a1**two + beta*a2**two)
     !C_p = ( A2 - zeta0**two* ( ((a1**two * a2**two)/(two*(a1**two+a2**two)**two))  + Z*(a1/a2)**two  ) )*a2**two - ( I )
     C_B  = 4.0*pi*dens_uni*(alpha*a1**two + beta*a2**two)
     !Determine after fixing units
-    Omega2 = two*sqrt((one - eccty**two))*(3.0 - two*eccty**two)*asin(eccty)/e**3.0 - 6.0*(one - e**two)/e**two ! In units of pi.G.\rho
-    Omega  = sqrt(Omega2) ! In units of sqrt(pi.G.\rho)
+    Omega2 = (two*sqrt((one - eccty**two))*(3.0 - two*eccty**two)*asin(eccty)/e**3.0 - 6.0*(one - e**two)/e**two)*pi*newtong*dens_uni 
+    Omega  = sqrt(Omega2) 
     zeta0  = two*Omega
     Z      = alpha/zeta0**two
-
-    ! Background is basically a vacuum. For numerical considerations we prescribe a 
-    ! small density with no initial motion and no magentic fields.
-    ! We do not consider the background fluid to interact with the ellipsoid at t = 0. 
-    ! Hence from hydrostatic equilibrium the pressure is also uniform. 
-    bg_pres = bg_dens
 
     fl  => flind%ion
     cgl => leaves%first
@@ -171,7 +168,7 @@ contains
                 cg%b(zdim,i,j,k)   = zero
 
                 ! Pressure of the star. Eq.(15) 
-                pres_star = dens_uni*( (I - A1*cg%x(i)*cg*x(i) - A2*cg%y(j)*cg%y(j) -A3*cg%z(k)*cg%z(k)) - &
+                pres_star = dens_uni*( pi*newtong*dens_uni*(I - A1*cg%x(i)*cg*x(i) - A2*cg%y(j)*cg%y(j) -A3*cg%z(k)*cg%z(k)) - &
                                             zeta0**two*(alpha**two * cg%x(i)*cg%x(i) + beta**two * cg%y(j)*cg%y(j))/(two*(alpha + beta)**two) + &
                                             ( (zeta0**2/(2*(alpha + beta))) + one )*(alpha*cg%x(i)*cg%x(i) + beta*cg%y(j)*cg%y(j)) + C_p )
                 
