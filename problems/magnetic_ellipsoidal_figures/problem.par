@@ -6,12 +6,12 @@ $BASE_DOMAIN
   bnd_yr = 'out'
   bnd_zl = 'out'
   bnd_zr = 'out'
-  xmin   = -2.
-  xmax   =  2.
-  ymin   = -2.
-  ymax   =  2.
-  zmin   = -2.
-  zmax   =  2.
+  xmin   = -2.e6
+  xmax   =  2.e6
+  ymin   = -2.e6
+  ymax   =  2.e6
+  zmin   = -2.e6
+  zmax   =  2.e6
 /
 
 $MPI_BLOCKS
@@ -62,19 +62,21 @@ $NUMERICAL_SETUP
 /
 
 $GRAVITY
+  grav_bnd_str  = "isolated"
 /
 
 $RESISTIVITY
 /
 
 $PROBLEM_CONTROL
-   a1 = 1.0
-   a2 = 1.0
-   a3 = 0.6
+   a1 = 1.e6
+   a2 = 1.e6
+   a3 = 0.6e6
    alpha = 1.0
    beta  = 1.0
    bg_dens = 1.e-8
-   dens_uni = 1.0
+   bg_pres = 1.e-8
+   dens_uni = 1.e14
 /
 
 $AMR
