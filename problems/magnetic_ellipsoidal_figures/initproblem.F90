@@ -27,6 +27,9 @@
 #include "piernik.h"
 
 !> \brief Implementation of magnetic ellipsoidal figures of equilibrium.
+!   The literature references are MNRAS 416, L75-L79 (2011), hereafter Kawa11.
+!   Ellipsoidal figures of equilibrium, S. Chandrasekhar, hereafter SC.
+!<
 
 module initproblem
 
@@ -43,7 +46,11 @@ contains
 !-----------------------------------------------------------------------------------------------------------------
   subroutine problem_pointers
 
+    use gravity,               only: grav_pot_3d
+
     implicit none
+
+    grav_pot_3d => ellipsoid_grav_pot_3d
 
   end subroutine problem_pointers
 !-----------------------------------------------------------------------------------------------------------------
@@ -127,28 +134,37 @@ contains
     class(component_fluid), pointer :: fl
 
     integer                         :: i,j,k
-    real                            :: pres_star, bg_pres
+    real                            :: pres_star
     real                            :: zeta0, Omega, Omega2
     real                            :: C_p, C_B
     real                            :: Z
-    real                            :: I, A1, A2, A3, eccty
+    real                            :: I_ellip, AA1, AA2, AA3, eccty
 
+    ! SC Eq(37), Ch 3
     eccty = sqrt(one - (a3/a1)**two)
-    A1    = (sqrt(one - eccty**two)/e**3.0)*asin(eccty) - (one - eccty**two)/e**two
-    A2    = A1
-    A3    = two/eccty**two - two*(sqrt(one - eccty**two)/e**3.0)*asin(e)
-    I     = a1**two * A1 + a2**two * A2 + a3**two * A3 
-    C_p   = (-pi*newtong*dens_uni*(I - A1*a1**two - A2*a2**two - A3*a3**two)) + &
-               zeta0**2*(alpha**two * a1**two + beta**two * a2**two)/(two*(alpha + beta)**two) - &
-                ( (zeta0**two/(two*(alpha + beta))) + one )*(alpha*a1**two + beta*a2**two)
-    !C_p = ( A2 - zeta0**two* ( ((a1**two * a2**two)/(two*(a1**two+a2**two)**two))  + Z*(a1/a2)**two  ) )*a2**two - ( I )
-    C_B  = 4.0*pi*dens_uni*(alpha*a1**two + beta*a2**two)
-    !Determine after fixing units
-    Omega2 = (two*sqrt((one - eccty**two))*(3.0 - two*eccty**two)*asin(eccty)/e**3.0 - 6.0*(one - e**two)/e**two)*pi*newtong*dens_uni 
+
+    ! SC Eq(36), Ch 3
+    AA1    = (sqrt(one - eccty**two)/eccty**3.0)*asin(eccty) - (one - eccty**two)/eccty**two
+    AA2    = AA1
+    AA3    = two/eccty**two - two*(sqrt(one - eccty**two)/eccty**3.0)*asin(eccty)
+    I_ellip     = a1**two * AA1 + a2**two * AA2 + a3**two * AA3 ! Defined after Eq(16) in Kawa11
+
+    ! SC Eq(6), Ch 5
+    Omega2 = (two*sqrt((one - eccty**two))*(3.0 - two*eccty**two)*asin(eccty)/eccty**3.0 - 6.0*(one - eccty**two)/eccty**two)*pi*newtong*dens_uni 
     Omega  = sqrt(Omega2) 
+
+    ! Kawa11 Eq(18)
     zeta0  = two*Omega
     Z      = alpha/zeta0**two
 
+    ! Kawa11 from Eq(15)
+    C_p   = (-pi*newtong*dens_uni*(I_ellip - AA1*a1**two - AA2*a2**two - AA3*a3**two)) + &
+               zeta0**2*(alpha**two * a1**two + beta**two * a2**two)/(two*(alpha + beta)**two) - &
+                ( (zeta0**two/(two*(alpha + beta))) + one )*(alpha*a1**two + beta*a2**two)
+    !C_p = ( AA2 - zeta0**two* ( ((a1**two * a2**two)/(two*(a1**two+a2**two)**two))  + Z*(a1/a2)**two  ) )*a2**two - ( I ) ! Kawa11 Eq(19)
+    ! Kawa11 from Eq(12)
+    C_B  = 4.0*pi*dens_uni*(alpha*a1**two + beta*a2**two)
+   
     fl  => flind%ion
     cgl => leaves%first
 
@@ -168,16 +184,16 @@ contains
                 cg%b(zdim,i,j,k)   = zero
 
                 ! Pressure of the star. Eq.(15) 
-                pres_star = dens_uni*( pi*newtong*dens_uni*(I - A1*cg%x(i)*cg*x(i) - A2*cg%y(j)*cg%y(j) -A3*cg%z(k)*cg%z(k)) - &
+                pres_star = dens_uni*( pi*newtong*dens_uni*(I_ellip - AA1*cg%x(i)*cg%x(i) - AA2*cg%y(j)*cg%y(j) -AA3*cg%z(k)*cg%z(k)) - &
                                             zeta0**two*(alpha**two * cg%x(i)*cg%x(i) + beta**two * cg%y(j)*cg%y(j))/(two*(alpha + beta)**two) + &
                                             ( (zeta0**2/(2*(alpha + beta))) + one )*(alpha*cg%x(i)*cg%x(i) + beta*cg%y(j)*cg%y(j)) + C_p )
                 
                 if(pres_star .gt. bg_pres) then
                    
                    cg%u(fl%idn,i,j,k) = dens_uni
-                   cg%u(fl%imx,i,j,k) = -cg%u(fl%idn,i,j,k)*zeta0*(beta*cg%y(j))/(alpha + beta)
-                   cg%u(fl%imy,i,j,k) = cg%u(fl%idn,i,j,k)*zeta0*(alpha*cg%x(i))/(alpha + beta)
-                   cg%b(zdim,i,j,k)   = sqrt(two*(C_B - 4.0*pi*dens_uni*(alpha*cg%x(i)*cg%x(i) + beta*cg%y(j)*cg%y(j))))
+                   cg%u(fl%imx,i,j,k) = -cg%u(fl%idn,i,j,k)*zeta0*(beta*cg%y(j))/(alpha + beta) ! Kawa11 Eq(6)
+                   cg%u(fl%imy,i,j,k) = cg%u(fl%idn,i,j,k)*zeta0*(alpha*cg%x(i))/(alpha + beta) ! Kawa11 Eq(6)
+                   cg%b(zdim,i,j,k)   = sqrt(two*(C_B - 4.0*pi*dens_uni*(alpha*cg%x(i)*cg%x(i) + beta*cg%y(j)*cg%y(j)))) ! Kawa11 Eq(12)
                    cg%u(fl%ien,i,j,k) = pres_star/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
                         emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
                    
@@ -198,4 +214,58 @@ contains
 
   end subroutine problem_initial_conditions
 !----------------------------------------------------------------------------------------------------------------
+
+  subroutine ellipsoid_grav_pot_3d
+
+     use cg_leaves,   only: leaves
+     use cg_list,     only: cg_list_element
+     use constants,   only: pi, one, two
+     use grid_cont,   only: grid_container
+     use fluidindex,  only: flind
+     use fluidtypes,  only: component_fluid
+     use units,       only: newtong
+
+    implicit none
+
+    type(cg_list_element),  pointer :: cgl
+    type(grid_container),   pointer :: cg
+    class(component_fluid), pointer :: fl
+
+    integer                         :: i, j, k
+    real                            :: I_ellip, AA1, AA2, AA3, eccty
+
+    eccty = sqrt(one - (a3/a1)**two)
+    AA1    = (sqrt(one - eccty**two)/eccty**3.0)*asin(eccty) - (one - eccty**two)/eccty**two
+    AA2    = AA1
+    AA3    = two/eccty**two - two*(sqrt(one - eccty**two)/eccty**3.0)*asin(eccty)
+    I_ellip     = a1**two * AA1 + a2**two * AA2 + a3**two * AA3 
+
+    fl  => flind%ion
+    cgl => leaves%first
+
+    do while (associated(cgl))
+       
+       cg => cgl%cg
+
+       if(.not. cg%is_old) then
+
+          do k = cg%ks, cg%ke
+             do j = cg%js, cg%je
+                do i = cg%is, cg%ie
+                   cg%u(fl%idn,i,:,k) = dens_uni
+                   cg%gp(i,j,k) = -pi*newtong*cg%u(fl%idn,i,j,k)*(I - AA1*cg%x(i)*cg%x(i) - AA2*cg%y(j)*cg%y(j) - AA3*cg%z(k)*cg%z(k)) ! SC Eq(40) Ch 3
+                end do
+             end do
+          end do
+
+       end if
+
+         cgl => cgl%nxt
+
+    end do
+    
+  end subroutine ellipsoid_grav_pot_3d
+
+!----------------------------------------------------------------------------------------------------------------
+
 end module initproblem
