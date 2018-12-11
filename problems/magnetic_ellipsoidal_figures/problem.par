@@ -61,11 +61,8 @@ $NUMERICAL_SETUP
    glm_alpha = 0.2
 /
 
-$MULTIGRID_GRAVITY
-  grav_bnd_str  = "isolated"
-/
-
-$RESISTIVITY
+$GRAVITY
+   user_grav = .true.
 /
 
 $PROBLEM_CONTROL
@@ -80,12 +77,6 @@ $PROBLEM_CONTROL
 /
 
 $AMR
-/
-
-$MULTIGRID_SOLVER
-/
-
-$MULTIGRID_GRAVITY
 /
 
 $SHEARING
