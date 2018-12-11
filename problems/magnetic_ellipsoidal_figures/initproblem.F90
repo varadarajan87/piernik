@@ -141,7 +141,7 @@ contains
     real                            :: I_ellip, AA1, AA2, AA3, eccty
 
     ! SC Eq(37), Ch 3
-    eccty = sqrt(one - (a3/a1)**two)
+    eccty = sqrt(one - (a3/a1)**two) ! eccty = 0.7141428429
 
     ! SC Eq(36), Ch 3
     AA1    = (sqrt(one - eccty**two)/eccty**3.0)*asin(eccty) - (one - eccty**two)/eccty**two
@@ -151,7 +151,7 @@ contains
 
     ! SC Eq(6), Ch 5
     Omega2 = (two*sqrt((one - eccty**two))*(3.0 - two*eccty**two)*asin(eccty)/eccty**3.0 - 6.0*(one - eccty**two)/eccty**two)*pi*newtong*dens_uni 
-    Omega  = sqrt(Omega2) 
+    Omega  = sqrt(Omega2) ! T = 2*pi/Omega = 2.55265390e-3 sec, Omega = 2461.432513 sec^{-1}
 
     ! Kawa11 Eq(18)
     zeta0  = two*Omega
