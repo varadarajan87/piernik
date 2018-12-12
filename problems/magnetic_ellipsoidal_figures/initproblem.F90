@@ -66,8 +66,8 @@ contains
     a3 = 0.6e6
     alpha = -1.0
     beta  = -1.0
-    bg_dens = 1.e-8
-    bg_pres = 1.e-8
+    bg_dens = 1.e-4
+    bg_pres = 1.e-4
     dens_uni = 1.e14
 
     if (master) then
@@ -189,7 +189,7 @@ contains
                                             zeta0**two*(alpha**two * cg%x(i)*cg%x(i) + beta**two * cg%y(j)*cg%y(j))/(two*(alpha + beta)**two) + &
                                             ( (zeta0**2/(2*(alpha + beta))) + one )*(alpha*cg%x(i)*cg%x(i) + beta*cg%y(j)*cg%y(j)) + C_p )
 
-                if (pres_star .gt. bg_pres) then
+                if (pres_star .ge. bg_pres) then
 
                    cg%u(fl%idn,i,j,k) = dens_uni
                    cg%u(fl%imx,i,j,k) = -cg%u(fl%idn,i,j,k)*zeta0*(beta*cg%y(j))/(alpha + beta) ! Kawa11 Eq(6)
