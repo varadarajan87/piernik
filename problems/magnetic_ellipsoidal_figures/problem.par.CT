@@ -71,8 +71,8 @@ $PROBLEM_CONTROL
    a3 = 0.7e6
    alpha = -1.0
    beta  = -1.0
-   bg_dens = 1.e-8
-   bg_pres = 1.e-8
+   bg_dens = 1.e-4
+   bg_pres = 1.e-4
    dens_uni = 1.e14
 /
 
