@@ -64,8 +64,8 @@ contains
     a1 = 1.e6
     a2 = 1.e6
     a3 = 0.6e6
-    alpha = 1.0
-    beta  = 1.0
+    alpha = -1.0
+    beta  = -1.0
     bg_dens = 1.e-8
     bg_pres = 1.e-8
     dens_uni = 1.e14
@@ -163,7 +163,8 @@ contains
                 ( (zeta0**two/(two*(alpha + beta))) + one )*(alpha*a1**two + beta*a2**two)
     !C_p = ( AA2 - zeta0**two* ( ((a1**two * a2**two)/(two*(a1**two+a2**two)**two))  + Z*(a1/a2)**two  ) )*a2**two - ( I ) ! Kawa11 Eq(19)
     ! Kawa11 from Eq(12)
-    C_B  = 4.0*pi*dens_uni*(alpha*a1**two + beta*a2**two)
+    !C_B  = 4.0*pi*dens_uni*(alpha*a1**two + beta*a2**two)
+    C_B   = zero
 
     fl  => flind%ion
     cgl => leaves%first
@@ -193,7 +194,7 @@ contains
                    cg%u(fl%idn,i,j,k) = dens_uni
                    cg%u(fl%imx,i,j,k) = -cg%u(fl%idn,i,j,k)*zeta0*(beta*cg%y(j))/(alpha + beta) ! Kawa11 Eq(6)
                    cg%u(fl%imy,i,j,k) = cg%u(fl%idn,i,j,k)*zeta0*(alpha*cg%x(i))/(alpha + beta) ! Kawa11 Eq(6)
-                   cg%b(zdim,i,j,k)   = sqrt(two*(C_B - 4.0*pi*dens_uni*(alpha*cg%x(i)*cg%x(i) + beta*cg%y(j)*cg%y(j)))) ! Kawa11 Eq(12)
+                   cg%b(zdim,i,j,k)   = sqrt(two*(-4.0*pi*dens_uni*(alpha*cg%x(i)*cg%x(i) + beta*cg%y(j)*cg%y(j)) + C_B)) ! Kawa11 Eq(12)
                    cg%u(fl%ien,i,j,k) = pres_star/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
                         emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
 
@@ -219,7 +220,7 @@ contains
 
      use cg_leaves,   only: leaves
      use cg_list,     only: cg_list_element
-     use constants,   only: pi, one, two, PIERNIK_INIT_IO_IC
+     use constants,   only: pi, one, two, PIERNIK_INIT_IO_IC, LO, HI, xdim, zdim
      use dataio_pub,  only: warn, printinfo, code_progress
      use grid_cont,   only: grid_container
      use fluidindex,  only: flind
@@ -232,7 +233,7 @@ contains
     type(grid_container),   pointer :: cg
     class(component_fluid), pointer :: fl
 
-    integer                         :: i, j, k
+    integer                         :: i, k!, j
     real                            :: I_ellip, AA1, AA2, AA3, eccty
 
     if (code_progress < PIERNIK_INIT_IO_IC) then
@@ -257,14 +258,21 @@ contains
 
        if (.not. cg%is_old) then
 
-          do k = cg%ks, cg%ke
-             do j = cg%js, cg%je
-                do i = cg%is, cg%ie
-                   cg%u(fl%idn,i,:,k) = dens_uni
-                   cg%gp(i,j,k) = -pi*newtong*cg%u(fl%idn,i,j,k)*(I - AA1*cg%x(i)*cg%x(i) - AA2*cg%y(j)*cg%y(j) - AA3*cg%z(k)*cg%z(k)) ! SC Eq(40) Ch 3
-                enddo
+          do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
+             do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
+                cg%u(fl%idn,i,:,k) = dens_uni
+                cg%gp(i,:,k) = -pi*newtong*cg%u(fl%idn,i,:,k)*(I - AA1*cg%x(i)*cg%x(i) - AA2*cg%y(:)*cg%y(:) - AA3*cg%z(k)*cg%z(k)) ! SC Eq(40) Ch 3
              enddo
           enddo
+
+          ! do k = cg%ks, cg%ke
+          !    do j = cg%js, cg%je
+          !       do i = cg%is, cg%ie
+          !          cg%u(fl%idn,i,:,k) = dens_uni
+          !          cg%gp(i,j,k) = -pi*newtong*cg%u(fl%idn,i,j,k)*(I - AA1*cg%x(i)*cg%x(i) - AA2*cg%y(j)*cg%y(j) - AA3*cg%z(k)*cg%z(k)) ! SC Eq(40) Ch 3
+          !       enddo
+          !    enddo
+          ! enddo
 
        endif
 
