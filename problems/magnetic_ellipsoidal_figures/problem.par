@@ -39,7 +39,7 @@ $OUTPUT_CONTROL
    dt_res       = 0.0
    dt_log       = 0.01
    dt_tsl       = 0.01
-   vars(1:)    = 'dens', 'magx', 'magy', 'pres', 'velx', 'vely', 'velz', 'magB', 'divbc'
+   vars(1:)    = 'dens', 'magx', 'magy', 'magz', 'pres', 'velx', 'vely', 'velz', 'magB', 'divbc'
 /
 
 $FLUID_IONIZED
@@ -69,8 +69,8 @@ $PROBLEM_CONTROL
    a1 = 1.e6
    a2 = 1.e6
    a3 = 0.7e6
-   alpha = 1.0
-   beta  = 1.0
+   alpha = -1.0
+   beta  = -1.0
    bg_dens = 1.e-8
    bg_pres = 1.e-8
    dens_uni = 1.e14
