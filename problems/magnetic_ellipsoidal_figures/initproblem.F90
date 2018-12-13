@@ -223,6 +223,7 @@ contains
      use constants,   only: pi, one, two, PIERNIK_INIT_IO_IC, LO, HI, xdim, zdim
      use dataio_pub,  only: warn, printinfo, code_progress
      use grid_cont,   only: grid_container
+     use mpisetup,    only: master
      use units,       only: newtong
 
     implicit none
@@ -234,10 +235,10 @@ contains
     real                            :: I_ellip, AA1, AA2, AA3, eccty
 
     if (code_progress < PIERNIK_INIT_IO_IC) then
-       call warn("[initproblem:ellipsoid_grav_pot_3d] parameters not ready yet")
+       if (master) call warn("[initproblem:ellipsoid_grav_pot_3d] parameters not ready yet")
        return
     else
-       call printinfo("[initproblem:ellipsoid_grav_pot_3d] computing analytical potential for the ellipsoid")
+       if (master) call printinfo("[initproblem:ellipsoid_grav_pot_3d] computing analytical potential for the ellipsoid")
     endif
 
     eccty = sqrt(one - (a3/a1)**two)
