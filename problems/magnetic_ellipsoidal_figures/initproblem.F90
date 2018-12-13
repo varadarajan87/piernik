@@ -187,8 +187,8 @@ contains
 
                 ! Pressure of the star. Eq.(15)
                 pres_star = dens_uni*(pi*newtong*dens_uni*(I_ellip - AA1*cg%x(i)*cg%x(i) - AA2*cg%y(j)*cg%y(j) -AA3*cg%z(k)*cg%z(k)) - half*abs(u_x*u_x + u_y*u_y)  + Psi_scalar + Phi_scalar + C_p)
-                !If the expression for pres_star can be written like below it will be more easy ..!!
-                !pres_star = dens_uni*(-cg%gp(i,j,k) - half*abs(u_x*u_x + u_y*u_y)  + Psi_scalar + Phi_scalar + C_p)
+                !If the expression for pres_star can be written like below it will be more easy, so call potential from ellipsoid_grav_pot_3d  ..!!
+                !pres_star = dens_uni*(-potential - half*abs(u_x*u_x + u_y*u_y)  + Psi_scalar + Phi_scalar + C_p)
                 
                 if (pres_star .ge. bg_pres) then
 
@@ -223,15 +223,12 @@ contains
      use constants,   only: pi, one, two, PIERNIK_INIT_IO_IC, LO, HI, xdim, zdim
      use dataio_pub,  only: warn, printinfo, code_progress
      use grid_cont,   only: grid_container
-     use fluidindex,  only: flind
-     use fluidtypes,  only: component_fluid
      use units,       only: newtong
 
     implicit none
 
     type(cg_list_element),  pointer :: cgl
     type(grid_container),   pointer :: cg
-    class(component_fluid), pointer :: fl
 
     integer                         :: i, k!, j
     real                            :: I_ellip, AA1, AA2, AA3, eccty
@@ -249,7 +246,6 @@ contains
     AA3    = two/eccty**two - two*(sqrt(one - eccty**two)/eccty**3.0)*asin(eccty)
     I_ellip     = a1**two * AA1 + a2**two * AA2 + a3**two * AA3
 
-    fl  => flind%ion
     cgl => leaves%first
 
     do while (associated(cgl))
@@ -260,8 +256,7 @@ contains
 
           do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
              do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
-                cg%u(fl%idn,i,:,k) = dens_uni
-                cg%gp(i,:,k) = -pi*newtong*cg%u(fl%idn,i,:,k)*(I - AA1*cg%x(i)*cg%x(i) - AA2*cg%y(:)*cg%y(:) - AA3*cg%z(k)*cg%z(k)) ! SC Eq(40) Ch 3
+                cg%gp(i,:,k) = -pi*newtong*dens_uni*(I - AA1*cg%x(i)*cg%x(i) - AA2*cg%y(:)*cg%y(:) - AA3*cg%z(k)*cg%z(k)) ! SC Eq(40) Ch 3
              enddo
           enddo
 
