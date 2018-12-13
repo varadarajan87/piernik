@@ -120,7 +120,7 @@ contains
 
     use cg_leaves,   only: leaves
     use cg_list,     only: cg_list_element
-    use constants,   only: xdim, ydim, zdim, one, zero, two, pi
+    use constants,   only: xdim, ydim, zdim, one, zero, two, pi, half
     use grid_cont,   only: grid_container
     use fluidindex,  only: flind
     use fluidtypes,  only: component_fluid
@@ -134,10 +134,9 @@ contains
     class(component_fluid), pointer :: fl
 
     integer                         :: i,j,k
-    real                            :: pres_star
+    real                            :: pres_star, Phi_scalar, Psi_scalar, u_x, u_y
     real                            :: zeta0, Omega, Omega2
-    real                            :: C_p, C_B
-    real                            :: Z
+    real                            :: C_p, C_B, Z
     real                            :: I_ellip, AA1, AA2, AA3, eccty
 
     ! SC Eq(37), Ch 3
@@ -158,12 +157,9 @@ contains
     Z      = alpha/zeta0**two
 
     ! Kawa11 from Eq(15)
-    ! C_p   = (-pi*newtong*dens_uni*(I_ellip - AA1*a1**two - AA2*a2**two - AA3*a3**two)) + &
-    !            zeta0**2*(alpha**two * a1**two + beta**two * a2**two)/(two*(alpha + beta)**two) - &
-    !             ( (zeta0**two/(two*(alpha + beta))) + one )*(alpha*a1**two + beta*a2**two)
     C_p = ( pi*newtong*dens_uni*AA2 - zeta0**two* ( ((a1**two * a2**two)/(two*(a1**two+a2**two)**two))  + Z*(a1/a2)**two  ) )*a2**two - ( pi*newtong*dens_uni*I_ellip ) ! Kawa11 Eq(19)
+
     ! Kawa11 from Eq(12)
-    !C_B  = 4.0*pi*dens_uni*(alpha*a1**two + beta*a2**two)
     C_B   = zero
 
     fl  => flind%ion
@@ -180,29 +176,35 @@ contains
           do j = cg%js, cg%je
              do i = cg%is, cg%ie
 
+                ! Kawa11 Eq(13)
+                Phi_scalar = alpha*cg%x(i)*cg%x(i) + beta*cg%y(j)*cg%y(j)
+                ! Kawa11 Eq(14)
+                Psi_scalar = zeta0**two*(alpha*cg%x(i)*cg%x(i) + beta*cg%y(j)*cg%y(j))/(two*(alpha+beta))
+
+                ! Kawa11 Eq(3)
+                u_x = -zeta0*(beta*cg%y(j))/(alpha + beta)
+                u_y = zeta0*(alpha*cg%x(i))/(alpha + beta)
 
                 ! Pressure of the star. Eq.(15)
-                pres_star = dens_uni*( pi*newtong*dens_uni*(I_ellip - AA1*cg%x(i)*cg%x(i) - AA2*cg%y(j)*cg%y(j) -AA3*cg%z(k)*cg%z(k)) - &
-                                            zeta0**two*(alpha**two * cg%x(i)*cg%x(i) + beta**two * cg%y(j)*cg%y(j))/(two*(alpha + beta)**two) + &
-                                            ( (zeta0**2/(2*(alpha + beta))) + one )*(alpha*cg%x(i)*cg%x(i) + beta*cg%y(j)*cg%y(j)) + C_p )
-                !print*, pres_star
-
+                pres_star = dens_uni*(pi*newtong*dens_uni*(I_ellip - AA1*cg%x(i)*cg%x(i) - AA2*cg%y(j)*cg%y(j) -AA3*cg%z(k)*cg%z(k)) - half*abs(u_x*u_x + u_y*u_y)  + Psi_scalar + Phi_scalar + C_p)
+                !If the expression for pres_star can be written like below it will be more easy ..!!
+                !pres_star = dens_uni*(-cg%gp(i,j,k) - half*abs(u_x*u_x + u_y*u_y)  + Psi_scalar + Phi_scalar + C_p)
+                
                 if (pres_star .ge. bg_pres) then
 
                    cg%u(fl%idn,i,j,k) = dens_uni
-                   cg%u(fl%imx,i,j,k) = -cg%u(fl%idn,i,j,k)*zeta0*(beta*cg%y(j))/(alpha + beta) ! Kawa11 Eq(6)
-                   cg%u(fl%imy,i,j,k) = cg%u(fl%idn,i,j,k)*zeta0*(alpha*cg%x(i))/(alpha + beta) ! Kawa11 Eq(6)
-                   cg%b(zdim,i,j,k)   = sqrt(two*(-4.0*pi*dens_uni*(alpha*cg%x(i)*cg%x(i) + beta*cg%y(j)*cg%y(j)) + C_B)) ! Kawa11 Eq(12)
-                   cg%u(fl%ien,i,j,k) = pres_star/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
+                   cg%u(fl%imx,i,j,k) = cg%u(fl%idn,i,j,k)*u_x ! Kawa11 Eq(6)
+                   cg%u(fl%imy,i,j,k) = cg%u(fl%idn,i,j,k)*u_y ! Kawa11 Eq(6)
+                   cg%b(zdim,i,j,k)   = sqrt(two*(-4.0*pi*dens_uni*(Phi_scalar + C_B))) ! Kawa11 Eq(12)
+                   cg%u(fl%ien,i,j,k) = pres_star/fl%gam_1+ ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
                         emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
-
+                   
                 else
 
                    cg%u(fl%idn,i,j,k) = bg_dens
                    cg%u(fl%ien,i,j,k) = bg_pres/fl%gam_1 + ekin(cg%u(fl%imx,i,j,k), cg%u(fl%imy,i,j,k), cg%u(fl%imz,i,j,k), cg%u(fl%idn,i,j,k)) + &
                         emag(cg%b(xdim,i,j,k), cg%b(ydim,i,j,k), cg%b(zdim,i,j,k))
-
-
+                   
                 endif
 
              enddo
@@ -263,15 +265,6 @@ contains
              enddo
           enddo
 
-          ! do k = cg%ks, cg%ke
-          !    do j = cg%js, cg%je
-          !       do i = cg%is, cg%ie
-          !          cg%u(fl%idn,i,:,k) = dens_uni
-          !          cg%gp(i,j,k) = -pi*newtong*cg%u(fl%idn,i,j,k)*(I - AA1*cg%x(i)*cg%x(i) - AA2*cg%y(j)*cg%y(j) - AA3*cg%z(k)*cg%z(k)) ! SC Eq(40) Ch 3
-          !       enddo
-          !    enddo
-          ! enddo
-
        endif
 
          cgl => cgl%nxt
@@ -283,3 +276,21 @@ contains
 !----------------------------------------------------------------------------------------------------------------
 
 end module initproblem
+
+! C_p   = (-pi*newtong*dens_uni*(I_ellip - AA1*a1**two - AA2*a2**two - AA3*a3**two)) + &
+!            zeta0**2*(alpha**two * a1**two + beta**two * a2**two)/(two*(alpha + beta)**two) - &
+!             ( (zeta0**two/(two*(alpha + beta))) + one )*(alpha*a1**two + beta*a2**two)
+
+! do k = cg%ks, cg%ke
+!    do j = cg%js, cg%je
+!       do i = cg%is, cg%ie
+!          cg%u(fl%idn,i,:,k) = dens_uni
+!          cg%gp(i,j,k) = -pi*newtong*cg%u(fl%idn,i,j,k)*(I - AA1*cg%x(i)*cg%x(i) - AA2*cg%y(j)*cg%y(j) - AA3*cg%z(k)*cg%z(k)) ! SC Eq(40) Ch 3
+!       enddo
+!    enddo
+! enddo
+!C_B  = 4.0*pi*dens_uni*(alpha*a1**two + beta*a2**two)
+! pres_star = dens_uni*( pi*newtong*dens_uni*(I_ellip - AA1*cg%x(i)*cg%x(i) - AA2*cg%y(j)*cg%y(j) -AA3*cg%z(k)*cg%z(k)) - &
+!                             zeta0**two*(alpha**two * cg%x(i)*cg%x(i) + beta**two * cg%y(j)*cg%y(j))/(two*(alpha + beta)**two) + &
+!                             ( (zeta0**2/(2*(alpha + beta))) + one )*(alpha*cg%x(i)*cg%x(i) + beta*cg%y(j)*cg%y(j)) + C_p )
+
