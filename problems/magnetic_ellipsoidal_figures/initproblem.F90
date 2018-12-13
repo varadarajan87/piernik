@@ -252,15 +252,11 @@ contains
 
        cg => cgl%cg
 
-       if (.not. cg%is_old) then
-
           do i = cg%lhn(xdim, LO), cg%lhn(xdim, HI)
              do k = cg%lhn(zdim, LO), cg%lhn(zdim, HI)
                 cg%gp(i,:,k) = -pi*newtong*dens_uni*(I - AA1*cg%x(i)*cg%x(i) - AA2*cg%y(:)*cg%y(:) - AA3*cg%z(k)*cg%z(k)) ! SC Eq(40) Ch 3
              enddo
           enddo
-
-       endif
 
          cgl => cgl%nxt
 
