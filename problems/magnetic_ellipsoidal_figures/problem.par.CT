@@ -44,12 +44,10 @@ $OUTPUT_CONTROL
 
 $FLUID_IONIZED
    gamma    = 1.4
-   selfgrav = .true.
+   selfgrav = .false.
 /
 
 $FLUID_NEUTRAL
-   gamma    = 1.67
-   seflgrav = .true.
 /
 
 $NUMERICAL_SETUP
