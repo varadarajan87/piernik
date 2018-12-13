@@ -173,16 +173,13 @@ contains
 
        cg => cgl%cg
 
+       call cg%set_constant_b_field([zero, zero, zero])
+       cg%u([fl%imx, fl%imy, fl%imz], :, :, :) = zero
+
        do k = cg%ks, cg%ke
           do j = cg%js, cg%je
              do i = cg%is, cg%ie
 
-                cg%u(fl%imx,i,j,k) = zero
-                cg%u(fl%imy,i,j,k) = zero
-                cg%u(fl%imz,i,j,k) = zero
-                cg%b(xdim,i,j,k)   = zero
-                cg%b(ydim,i,j,k)   = zero
-                cg%b(zdim,i,j,k)   = zero
 
                 ! Pressure of the star. Eq.(15)
                 pres_star = dens_uni*( pi*newtong*dens_uni*(I_ellip - AA1*cg%x(i)*cg%x(i) - AA2*cg%y(j)*cg%y(j) -AA3*cg%z(k)*cg%z(k)) - &
