@@ -61,14 +61,14 @@ contains
 
     implicit none
 
-    a1 = 1.e6
-    a2 = 1.e6
-    a3 = 0.6e6
-    alpha = -1.0
-    beta  = -1.0
-    bg_dens = 1.e-4
-    bg_pres = 1.e-4
-    dens_uni = 1.e14
+    ! a1 = 1.e6
+    ! a2 = 1.e6
+    ! a3 = 0.6e6
+    ! alpha = -1.0
+    ! beta  = -1.0
+    ! bg_dens = 1.e-4
+    ! bg_pres = 1.e-4
+    ! dens_uni = 1.e14
 
     if (master) then
 
