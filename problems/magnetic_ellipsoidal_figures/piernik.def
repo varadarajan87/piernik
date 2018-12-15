@@ -1,8 +1,8 @@
 #define IONIZED
 #define MAGNETIC
 #define GRAV
+#define RESISTIVE
 
-#undef RESISTIVE
 #undef MULTIGRID
 
 #if !defined GLOBAL_FR_SPEED
