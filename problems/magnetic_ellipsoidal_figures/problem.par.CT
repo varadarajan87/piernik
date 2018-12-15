@@ -28,7 +28,7 @@ $RESTART_CONTROL
 /
 
 $END_CONTROL
-   tend = 3.e-3 ! T_one_rotation = 3 ms
+   tend = 3.e-3 ! tend = (no of rotations)*T_one_rotation 
    nend = 10000000
 /
 
@@ -69,10 +69,18 @@ $PROBLEM_CONTROL
    a3 = 0.7e6
    alpha = -1.0
    beta  = -1.0
-   bg_dens = 1.e-4
-   bg_pres = 1.e-4
+   bg_dens = 1.e0
+   bg_pres = 1.e27
    dens_uni = 1.e14
 /
+
+$RESISTIVITY
+   eta_0      = 1.0e-3
+   cfl_resist = 0.6
+   eta_1      = 0.0
+   j_crit     = 1.0
+   deint_max  = 0.01
+ /
 
 $AMR
 /
