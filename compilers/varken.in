@@ -6,7 +6,7 @@
 ###############################################################################
 PROG     = piernik
 F90      = mpif90  
-F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none -g 
+F90FLAGS  = -fdefault-real-8 -ffree-form -std=gnu -fimplicit-none -ffree-line-length-none -g -I/usr/lib64/gfortran/modules/openmpi
 F90FLAGS += -O3 -funroll-loops -fno-stack-arrays
 F90FLAGS += -Wall -Wextra -W -Wsurprising -Wcharacter-truncation -Wno-unused-function -pedantic
 F90FLAGS += -fbacktrace -ggdb
@@ -17,3 +17,4 @@ F90FLAGS +=  -ffpe-trap=invalid,zero,overflow
 LDFLAGS   = -Wl,--as-needed -Wl,-O1
 MAKEFLAGS += -j4
 F90FLAGS += -I/usr/include
+
