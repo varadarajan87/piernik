@@ -33,7 +33,7 @@
 module multigrid_old_soln
 ! pulled by MULTIGRID && SELF_GRAV
 
-   use old_soln_list, only: old_soln, os_list_undef_T, os_list_T
+   use old_soln_list, only: old_soln, os_list_undef_t, os_list_t
 
    implicit none
 
@@ -44,8 +44,8 @@ module multigrid_old_soln
    integer(kind=4), parameter :: nold_max=3   !< maximum implemented extrapolation order
 
    type :: soln_history                       !< container for a set of several old potential solutions
-      type(os_list_undef_T) :: invalid        !< a list of invalid slots ready to use
-      type(os_list_T) :: old                  !< indices and time points of stored solutions
+      type(os_list_undef_t) :: invalid        !< a list of invalid slots ready to use
+      type(os_list_t) :: old                  !< indices and time points of stored solutions
     contains
       procedure :: init_history               !< Allocate arrays, register fields
       procedure :: cleanup_history            !< Deallocate arrays
@@ -404,6 +404,7 @@ contains
       use hdf5,               only: HID_T, HSIZE_T, SIZE_T, &
            &                        h5aexists_f, h5gopen_f, h5gclose_f
       use h5lt,               only: h5ltget_attribute_ndims_f, h5ltget_attribute_info_f
+      use mpisetup,           only: master
       use named_array_list,   only: qna
       use set_get_attributes, only: get_attr
 
@@ -428,7 +429,7 @@ contains
       do i = lbound(nt, 1), ubound(nt, 1)
          call h5aexists_f(g_id, trim(this%old%label) // nt(i), a_exists, error)
          if (.not. a_exists) then
-            call printio("[multigrid_old_soln:read_os_attribute] " // trim(this%old%label) // nt(i) // " does not exist. Coldboot")
+            if (master) call printio("[multigrid_old_soln:read_os_attribute] " // trim(this%old%label) // nt(i) // " does not exist. Coldboot")
             return
          endif
       enddo
@@ -446,7 +447,7 @@ contains
       endif
       call h5ltget_attribute_info_f(file_id, "/", trim(this%old%label) // "_names", dims, tclass, tsize, error)
       if (dims(1) <= 0) then
-         call printio("[multigrid_old_soln:read_os_attribute] No " // trim(this%old%label) // "_names to read. Coldboot.")
+         if (master) call printio("[multigrid_old_soln:read_os_attribute] No " // trim(this%old%label) // "_names to read. Coldboot.")
          return
       endif
       allocate(namelist(dims(1)))
